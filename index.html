@@ -1,0 +1,4193 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Agent Prompt Builder — Goldfizh</title>
+  <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --purple:          #6331F4;
+      --purple-mid:      #7C5CFF;
+      --purple-light:    #A38DFB;
+      --purple-lightest: #E2DBFF;
+      --near-black:      #22222D;
+      --dark-grey:       #555E63;
+      --mid-grey:        #8C99AA;
+      --light-grey:      #DCE0E6;
+      --off-white:       #F4F4F6;
+      --white:           #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Epilogue', Calibri, sans-serif;
+      background: var(--off-white);
+      color: var(--near-black);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--white);
+      border-bottom: 1px solid var(--light-grey);
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--purple);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .logo-name {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+      color: var(--near-black);
+    }
+
+    .header-title {
+      font-size: 15px;
+      color: var(--dark-grey);
+      font-weight: 400;
+    }
+
+    .header-progress {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .progress-label {
+      font-size: 13px;
+      color: var(--mid-grey);
+      white-space: nowrap;
+    }
+    .progress-bar {
+      width: 120px;
+      height: 4px;
+      background: var(--light-grey);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--purple);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 24px 120px;
+    }
+
+    .page-intro {
+      margin-bottom: 40px;
+    }
+    .page-intro h1 {
+      font-size: 36px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--near-black);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-intro p {
+      font-size: 15px;
+      color: var(--dark-grey);
+    }
+
+    /* ── Section card ── */
+    .section-card {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 28px 28px 24px;
+      margin-bottom: 16px;
+      border: 1px solid var(--light-grey);
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .section-square {
+      width: 10px;
+      height: 10px;
+      background: var(--purple);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .section-label span {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--near-black);
+    }
+
+    /* ── Fields ── */
+    .field {
+      margin-bottom: 20px;
+    }
+    .field:last-child { margin-bottom: 0; }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--near-black);
+      margin-bottom: 7px;
+    }
+    .field .hint {
+      font-size: 12px;
+      color: var(--mid-grey);
+      margin-bottom: 7px;
+      line-height: 1.4;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 10px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 14px;
+      color: var(--near-black);
+      background: var(--white);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(99, 49, 244, 0.1);
+    }
+    input::placeholder, textarea::placeholder { color: var(--mid-grey); }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Button group (radio-style) ── */
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-option {
+      padding: 9px 18px;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 99px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dark-grey);
+      background: var(--white);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .btn-option:hover { border-color: var(--purple-light); color: var(--purple); }
+    .btn-option.selected {
+      border-color: var(--purple);
+      background: var(--purple-lightest);
+      color: var(--purple);
+    }
+
+    /* ── Document toggle rows ── */
+    .doc-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--off-white);
+    }
+    .doc-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .doc-row:first-child { padding-top: 0; }
+
+    .doc-toggle {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .doc-toggle input[type="checkbox"] { display: none; }
+    .toggle-track {
+      display: block;
+      width: 40px;
+      height: 22px;
+      background: var(--light-grey);
+      border-radius: 99px;
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 16px;
+      height: 16px;
+      background: var(--white);
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .doc-toggle input:checked + .toggle-track { background: var(--purple); }
+    .doc-toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    .doc-info { flex: 1; }
+    .doc-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--near-black);
+      margin-bottom: 3px;
+    }
+    .doc-desc { font-size: 12px; color: var(--mid-grey); }
+
+    .doc-filename {
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .doc-filename input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 8px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 12px;
+      color: var(--near-black);
+      background: var(--white);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    .doc-filename input:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(99, 49, 244, 0.1);
+    }
+    .doc-filename input::placeholder { color: var(--mid-grey); }
+
+    /* ── Chip / tag input ── */
+    .chip-input {
+      min-height: 46px;
+      padding: 7px 10px;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      cursor: text;
+      background: var(--white);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .chip-input:focus-within {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(99, 49, 244, 0.1);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--purple-lightest);
+      color: var(--purple);
+      border-radius: 6px;
+      padding: 3px 8px 3px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .chip-x {
+      cursor: pointer;
+      opacity: 0.5;
+      font-size: 15px;
+      line-height: 1;
+      transition: opacity 0.1s;
+      padding: 0 1px;
+    }
+    .chip-x:hover { opacity: 1; }
+    .chip-input input {
+      border: none;
+      outline: none;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 13px;
+      color: var(--near-black);
+      background: transparent;
+      min-width: 120px;
+      flex: 1;
+      padding: 4px 4px;
+    }
+    .chip-input input::placeholder { color: var(--mid-grey); }
+
+    /* ── Bottom bar ── */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--light-grey);
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 50;
+    }
+    .bottom-hint {
+      font-size: 13px;
+      color: var(--mid-grey);
+    }
+    .btn-generate {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--purple);
+      color: var(--white);
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: -0.01em;
+    }
+    .btn-generate:hover { background: #5229d8; }
+    .btn-generate:active { transform: scale(0.98); }
+
+    .btn-generate-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--dark-grey);
+      border: 1.5px solid var(--light-grey);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: -0.01em;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-generate-secondary:hover { border-color: var(--dark-grey); color: var(--near-black); }
+    .bottom-buttons { display: flex; gap: 10px; align-items: center; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 16, 32, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--white);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 760px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(16px);
+      transition: transform 0.2s;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--light-grey);
+      flex-shrink: 0;
+    }
+    .modal-header h2 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .modal-actions { display: flex; align-items: center; gap: 12px; }
+
+    .open-count {
+      font-size: 12px;
+      font-weight: 700;
+      background: #FF9500;
+      color: var(--white);
+      border-radius: 99px;
+      padding: 3px 10px;
+      display: none;
+    }
+    .open-count.visible { display: inline-block; }
+
+    .btn-copy {
+      background: var(--purple);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-copy:hover { background: #5229d8; }
+    .btn-copy.copied { background: #34C759; }
+
+    .btn-close {
+      width: 30px;
+      height: 30px;
+      background: var(--off-white);
+      border: none;
+      border-radius: 99px;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--dark-grey);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .btn-close:hover { background: var(--light-grey); }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    pre#output-pre {
+      background: var(--near-black);
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
+      color: #e5e5ea;
+    }
+
+    .ph { color: #FF9F0A; }
+
+    /* ── Access gate ── */
+    .access-gate {
+      position: fixed;
+      inset: 0;
+      background: #0F1020;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .access-gate.hidden { display: none; }
+    .gate-logo {
+      width: 44px;
+      height: 44px;
+      background: var(--purple);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 32px;
+    }
+    .gate-title {
+      font-size: 28px;
+      font-weight: 400;
+      color: white;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .gate-sub {
+      font-size: 14px;
+      color: var(--mid-grey);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .gate-input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      color: white;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s;
+      text-align: center;
+      letter-spacing: 0.1em;
+    }
+    .gate-input::placeholder { color: rgba(255,255,255,0.25); letter-spacing: 0; }
+    .gate-input:focus { border-color: var(--purple); }
+    .gate-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .gate-btn:hover { background: #5229d8; }
+    .gate-error {
+      font-size: 13px;
+      color: #FF453A;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* ── Upload card ── */
+    .upload-zone {
+      border: 2px dashed var(--light-grey);
+      border-radius: 12px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--purple);
+      background: rgba(99, 49, 244, 0.03);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--purple-lightest);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 18px;
+    }
+    .upload-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--near-black);
+      margin-bottom: 4px;
+    }
+    .upload-doc-types {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin: 10px 0 6px;
+    }
+    .upload-doc-types span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--purple);
+      background: var(--purple-lightest);
+      border-radius: 99px;
+      padding: 3px 10px;
+    }
+    .upload-doc-types span:last-child {
+      color: var(--mid-grey);
+      background: var(--off-white);
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--mid-grey);
+    }
+    .upload-hint span { color: var(--purple); font-weight: 600; }
+
+    .uploaded-files {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .uploaded-file {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--off-white);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .file-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--purple-lightest);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--purple);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .file-name {
+      flex: 1;
+      color: var(--near-black);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size { color: var(--mid-grey); flex-shrink: 0; }
+    .file-remove {
+      background: none;
+      border: none;
+      color: var(--mid-grey);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .file-remove:hover { color: #FF453A; }
+
+    .btn-analyse {
+      width: 100%;
+      padding: 13px;
+      background: var(--near-black);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 14px;
+      transition: background 0.15s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-analyse:hover { background: #333340; }
+    .btn-analyse:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .analyse-status {
+      font-size: 13px;
+      color: var(--mid-grey);
+      text-align: center;
+      margin-top: 10px;
+      min-height: 18px;
+    }
+    .analyse-status.success { color: #34C759; }
+    .analyse-status.error { color: #FF453A; }
+
+    /* ── Paired list (naam + omschrijving) ── */
+    .paired-list { display: flex; flex-direction: column; gap: 8px; }
+    .paired-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 28px;
+      gap: 8px;
+      align-items: center;
+    }
+    .paired-row input { margin: 0; }
+
+    /* spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* filled-by-AI indicator */
+    .ai-filled {
+      border-color: var(--purple) !important;
+      background: rgba(99,49,244,0.03) !important;
+    }
+
+    /* ── Add/Remove buttons ── */
+    .btn-add {
+      padding: 8px 16px;
+      background: var(--off-white);
+      border: 1.5px solid var(--light-grey);
+      border-radius: 8px;
+      font-family: 'Epilogue', Calibri, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dark-grey);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-add:hover { border-color: var(--purple-light); color: var(--purple); background: var(--white); }
+
+    .btn-remove {
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 6px;
+      font-size: 16px;
+      color: var(--mid-grey);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .btn-remove:hover { border-color: #FF453A; color: #FF453A; background: #fff0f0; }
+
+    @media (max-width: 680px) {
+      header { padding: 0 16px; }
+      .header-title { display: none; }
+      main { padding: 24px 16px 100px; }
+      .page-intro h1 { font-size: 28px; }
+      .bottom-bar { padding: 12px 16px; }
+      .doc-filename { width: 130px; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">→</div>
+    <span class="logo-name">goldfizh</span>
+  </div>
+  <span class="header-title">Content Agent Prompt Builder</span>
+  <div class="header-progress">
+    <span class="progress-label" id="progress-label">0 van 20 ingevuld</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</header>
+
+<!-- ══════════════════ FORM ══════════════════ -->
+<main>
+
+  <div class="page-intro">
+    <h1>Prompt configureren</h1>
+    <p>Vul de velden in — daarna genereer je de kant-en-klare agent-prompt.</p>
+  </div>
+
+  <!-- Documenten uploaden -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Automatisch invullen</span></div>
+
+    <p style="font-size:14px;color:var(--dark-grey);margin-bottom:20px;line-height:1.6">
+      Upload je stijldocumenten — merkdocument, schrijfwijzer, tone of voice — en wij vullen de velden hieronder automatisch in op basis van de inhoud.
+    </p>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx,.xml" onchange="handleFiles(this.files)" />
+      <div class="upload-icon">↑</div>
+      <div class="upload-label">Sleep al je stijldocumenten hierheen</div>
+      <div class="upload-doc-types">
+        <span>Merkdocument</span>
+        <span>Schrijfwijzer</span>
+        <span>Tone of voice</span>
+        <span>Sitemap (XML)</span>
+        <span>+ meer</span>
+      </div>
+      <div class="upload-hint">Meerdere bestanden tegelijk · PDF, TXT, MD of XML · Max. <span>3 MB per bestand</span></div>
+    </div>
+
+    <div class="uploaded-files" id="uploaded-files"></div>
+
+    <!-- Custom template upload -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--off-white)">
+      <div style="font-size:13px;font-weight:600;color:var(--near-black);margin-bottom:4px">Eigen contenttemplate (optioneel)</div>
+      <div style="font-size:12px;color:var(--mid-grey);margin-bottom:10px">Upload een eigen paginasjabloon — wordt als extra bijlage meegeleverd in het ZIP-pakket.</div>
+      <div class="upload-zone" id="template-upload-zone" style="padding:16px 20px;text-align:left;display:flex;align-items:center;gap:12px">
+        <input type="file" id="template-file-input" accept=".pdf,.txt,.md,.docx" onchange="handleTemplateFile(this.files)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" />
+        <div class="upload-icon" style="margin:0;flex-shrink:0">↑</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--near-black)">Sleep je template hierheen of klik om te uploaden</div>
+          <div class="upload-hint">PDF, TXT of MD · Max. 3 MB</div>
+        </div>
+      </div>
+      <div id="template-file-display"></div>
+    </div>
+
+    <button class="btn-analyse" id="btn-analyse" disabled onclick="analyseFiles()">
+      <span id="analyse-label">Analyseer en vul in</span>
+    </button>
+    <div class="analyse-status" id="analyse-status"></div>
+  </div>
+
+  <!-- Basisgegevens -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Basisgegevens</span></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Naam klant</label>
+        <input type="text" id="CLIENT_NAME" placeholder="bijv. Hypotheek Visie" />
+      </div>
+      <div class="field">
+        <label>Naam bureau</label>
+        <input type="text" id="AGENCY_NAME" placeholder="bijv. Goldfizh" />
+      </div>
+    </div>
+    <div class="field" style="max-width:200px">
+      <label>Datum</label>
+      <input type="text" id="DATUM" placeholder="bijv. 2026-04-01" />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Taal</label>
+        <div class="btn-group" data-field="TAAL">
+          <button class="btn-option" data-value="nl-NL">Nederlands</button>
+          <button class="btn-option" data-value="en-GB">Engels (GB)</button>
+          <button class="btn-option" data-value="en-US">Engels (US)</button>
+          <button class="btn-option" data-value="de-DE">Duits</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Doelmarkt</label>
+        <div class="btn-group" data-field="DOELMARKT">
+          <button class="btn-option" data-value="B2B">B2B</button>
+          <button class="btn-option" data-value="B2C">B2C</button>
+          <button class="btn-option" data-value="Beide">Beide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doelgroep -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Doelgroep</span></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Functietitel / rol</label>
+        <input type="text" id="DOELGROEP_ROL" placeholder="bijv. marketing manager, ondernemer" />
+      </div>
+      <div class="field">
+        <label>Sector / branche</label>
+        <input type="text" id="DOELGROEP_SECTOR" placeholder="bijv. dakkapellen, financiële diensten" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Kennisniveau</label>
+      <div class="btn-group" data-field="DOELGROEP_NIVEAU">
+        <button class="btn-option" data-value="beginner">Beginner</button>
+        <button class="btn-option" data-value="gevorderd">Gevorderd</button>
+        <button class="btn-option" data-value="expert">Expert</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Primaire zorgen</label>
+      <div class="hint">Wat houdt de doelgroep 's nachts wakker?</div>
+      <div class="chip-input" id="chips-zorgen" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'zorgen')" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Eigen vocabulaire</label>
+      <div class="hint">Hoe omschrijven zij hun problemen in eigen woorden?</div>
+      <textarea id="DOELGROEP_VOCABULAIRE" placeholder="bijv. 'mijn website scoort niet', 'we worden niet gevonden', 'onze content werkt niet'"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Wantrouwen</label>
+      <div class="hint">Wat gelooft de doelgroep niet zomaar — wat moet je extra onderbouwen?</div>
+      <textarea id="DOELGROEP_WANTROUWEN" placeholder="bijv. 'claims zonder bewijs', 'grote beloftes zonder cijfers'"></textarea>
+    </div>
+  </div>
+
+  <!-- Schrijfkwaliteit -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Schrijfkwaliteit</span></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Max. woorden per zin</label>
+        <input type="number" id="MAX_WOORDEN_PER_ZIN" placeholder="bijv. 20" min="5" max="60" />
+      </div>
+      <div class="field">
+        <label>Max. woorden per alinea</label>
+        <input type="number" id="MAX_WOORDEN_PER_ALINEA" placeholder="bijv. 80" min="20" max="200" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Leesniveau</label>
+      <div class="btn-group" data-field="LEESNIVEAU">
+        <button class="btn-option" data-value="B1">B1</button>
+        <button class="btn-option" data-value="B2">B2</button>
+        <button class="btn-option" data-value="C1">C1</button>
+      </div>
+      <div class="hint" style="margin-top:10px;line-height:1.6">
+        <strong>B1</strong> — Breed publiek: overheid, zorg, retail, e-commerce. Korte zinnen, geen vakjargon, begrijpelijk voor iedereen inclusief niet-moedertaalsprekers.<br>
+        <strong>B2</strong> — Gemiddeld opgeleid zakelijk publiek. Standaard voor B2B-content, dienstverleners en financiële diensten.<br>
+        <strong>C1</strong> — Expert: juridisch, medisch, technisch of wetenschappelijk. Vakjargon toegestaan, complexe zinsstructuren acceptabel.
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Zinsstructuur</label>
+      <div class="btn-group" data-field="ZINSSTRUCTUUR">
+        <button class="btn-option" data-value="kort en scanbaar">Kort &amp; scanbaar</button>
+        <button class="btn-option" data-value="gevarieerd">Gevarieerd</button>
+        <button class="btn-option" data-value="uitgebreid">Uitgebreid</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Kort &amp; scanbaar = max. 1 bijzin per zin · Gevarieerd = mix van kort en complex · Uitgebreid = meerdere bijzinnen toegestaan</div>
+    </div>
+  </div>
+
+  <!-- Tone of Voice -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Tone of Voice</span></div>
+
+    <div class="field">
+      <label>Aanspreekvorm</label>
+      <div class="btn-group" data-field="AANSPREEKVORM">
+        <button class="btn-option" data-value="je/jij">je / jij</button>
+        <button class="btn-option" data-value="u">u</button>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Toon</label>
+        <input type="text" id="TOON_OMSCHRIJVING" placeholder="bijv. professioneel en direct" />
+      </div>
+      <div class="field">
+        <label>Toon vermijden</label>
+        <input type="text" id="TOON_VERMIJDEN" placeholder="bijv. formeel, afstandelijk" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vakjargon</label>
+      <div class="btn-group" data-field="JARGON_BELEID">
+        <button class="btn-option" data-value="minimaal">Minimaal</button>
+        <button class="btn-option" data-value="branche-specifiek">Branche-specifiek</button>
+        <button class="btn-option" data-value="ruim">Ruim</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Verboden woorden</label>
+      <div class="hint">Typ een woord en druk op Enter om het toe te voegen</div>
+      <div class="chip-input" id="chips-verboden" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'verboden')" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Merkstrategie -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Merkstrategie</span></div>
+
+    <div class="field">
+      <label>Merkwaarden</label>
+      <div class="hint">Kommagescheiden kernwaarden van het merk</div>
+      <input type="text" id="MERKWAARDEN_LIJST" placeholder="bijv. betrouwbaar, transparant, deskundig" />
+    </div>
+
+    <div class="field">
+      <label>Communicatiepijlers</label>
+      <div class="hint">De 3–5 thema's waar alle content op teruggrijpt — geef elke pijler een naam en één zin uitleg</div>
+      <div class="paired-list" id="paired-pijlers"></div>
+      <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('pijlers')">+ Pijler toevoegen</button>
+    </div>
+
+    <div class="field">
+      <label>Drie kernuitkomsten</label>
+      <div class="hint">Welke drie resultaten drijft het merk? (bijv. tijdsbesparing, kostenbesparing, gemak)</div>
+      <div class="chip-input" id="chips-uitkomsten" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter… (max. 3)" onkeydown="handleChipKey(event,'uitkomsten')" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Contentstrategie principes</label>
+      <div class="hint">Hoe benadert de agent elk onderwerp? (bijv. "lead altijd met de ondernemer, niet het product")</div>
+      <div class="chip-input" id="chips-strategie" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'strategie')" />
+      </div>
+    </div>
+  </div>
+
+  <!-- SEO & Interne linking -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>SEO &amp; Interne linking</span></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Sitemap bestandsnaam</label>
+        <div class="hint">Naam van het sitemap-bestand — upload het bestand ook hierboven</div>
+        <input type="text" id="SITEMAP_BESTANDSNAAM" placeholder="sitemap.xml" />
+      </div>
+      <div class="field">
+        <label>Max. clusterpage-links per pagina</label>
+        <input type="number" id="MAX_CLUSTER_LINKS" placeholder="bijv. 5" min="1" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Bekende pagina-URL's</label>
+      <div class="hint">Plak hier de URL's die de agent mag linken — één URL per regel. De agent gebruikt deze lijst als ankerpunten voor interne linking.</div>
+      <textarea id="SITEMAP_URLS" placeholder="https://www.voorbeeld.nl/diensten/hypotheekadvies&#10;https://www.voorbeeld.nl/over-ons&#10;https://www.voorbeeld.nl/blog" style="min-height:100px;font-size:13px;font-family:monospace"></textarea>
+    </div>
+  </div>
+
+  <!-- Kennisbronnen -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Kennisbronnen</span></div>
+
+    <div class="field">
+      <label>Wetgeving</label>
+      <div class="hint">Toepasselijke wet- en regelgeving (hoogste prioriteit)</div>
+      <div class="chip-input" id="chips-wetgeving" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'wetgeving')" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Kennisbank</label>
+      <div class="hint">Interne kennisdocumenten</div>
+      <div class="chip-input" id="chips-kennisbank" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'kennisbank')" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vertrouwde externe bronnen</label>
+      <div class="hint">Websites of organisaties die de agent mag citeren (bijv. CBS, NHG, rijksoverheid.nl)</div>
+      <div class="chip-input" id="chips-externe-bronnen" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'externe-bronnen')" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Productcatalogus -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Productcatalogus</span></div>
+    <div class="hint" style="margin-bottom:20px">Geef elk product of elke dienst een naam en één zin met de kernfunctie of het belangrijkste voordeel</div>
+
+    <div class="paired-list" id="paired-producten"></div>
+    <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('producten')">+ Product / dienst toevoegen</button>
+  </div>
+
+  <!-- Entiteiten -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Entiteiten</span></div>
+    <div class="hint" style="margin-bottom:20px">Namen, begrippen en verwijzingen die de agent altijd consequent moet gebruiken</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Organisaties</label>
+        <div class="chip-input" id="chips-org" onclick="focusChipInput(this)">
+          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'org')" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Wet- en regelgeving</label>
+        <div class="chip-input" id="chips-wet" onclick="focusChipInput(this)">
+          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'wet')" />
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Producten / diensten</label>
+        <div class="chip-input" id="chips-product" onclick="focusChipInput(this)">
+          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'product')" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Locaties</label>
+        <div class="chip-input" id="chips-locatie" onclick="focusChipInput(this)">
+          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'locatie')" />
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Overig</label>
+      <div class="chip-input" id="chips-overig" onclick="focusChipInput(this)">
+        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'overig')" />
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:4px;padding-top:16px;border-top:1px solid var(--off-white)">
+      <label>Vakbegrippen</label>
+      <div class="hint">Geef elk vakbegrip een term én uitleg hoe de agent het bij eerste gebruik moet introduceren</div>
+      <div class="paired-list" id="paired-begrippen"></div>
+      <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('begrippen')">+ Begrip toevoegen</button>
+    </div>
+  </div>
+
+
+  <!-- Gedragsregels -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Gedragsregels</span></div>
+    <div class="hint" style="margin-bottom:20px">Wat mag de agent absoluut niet doen, schrijven of beweren? Guardrails zorgen voor consistente en veilige output. Geef elke regel een omschrijving én een reden of context.</div>
+    <div class="paired-list" id="paired-guardrails"></div>
+    <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('guardrails')">+ Gedragsregel toevoegen</button>
+  </div>
+
+</main>
+
+<!-- ══════════════════ BOTTOM BAR ══════════════════ -->
+<div class="bottom-bar">
+  <span class="bottom-hint" id="bottom-hint">Vul de velden in om de agent te genereren</span>
+  <div class="bottom-buttons">
+    <button class="btn-generate-secondary btn-lc" onclick="openLangChainModal()">
+      ↓ LangChain Agent
+    </button>
+    <button class="btn-generate" onclick="downloadCustomAgent()">
+      ↓ Download Custom Agent
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Gegenereerde prompt</h2>
+      <div class="modal-actions">
+        <span class="open-count" id="open-count"></span>
+        <button class="btn-copy" id="btn-copy" onclick="copyOutput()">Kopieer naar klembord</button>
+        <button class="btn-close" onclick="closeModal()">×</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <pre id="output-pre"><code id="output-code"></code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ LANGCHAIN MODAL ══════════════════ -->
+<div class="modal-overlay" id="lc-modal-overlay" onclick="handleLcOverlayClick(event)">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h2>LangChain Agent configureren</h2>
+      <button class="btn-close" onclick="closeLangChainModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px 24px 28px">
+
+      <div class="field">
+        <label>CMS-platform</label>
+        <div class="hint">De agent genereert een kant-en-klare publish-tool voor dit platform. Laat je het leeg? Dan krijg je een stub met TODO-commentaar.</div>
+        <div class="btn-group" style="margin-top:10px;flex-wrap:wrap">
+          <button class="btn-option lc-cms-btn selected" data-value="webflow"    onclick="selectLcCms('webflow')">Webflow</button>
+          <button class="btn-option lc-cms-btn"          data-value="contentful" onclick="selectLcCms('contentful')">Contentful</button>
+          <button class="btn-option lc-cms-btn"          data-value="prepr"      onclick="selectLcCms('prepr')">Prepr</button>
+          <button class="btn-option lc-cms-btn"          data-value="headless"   onclick="selectLcCms('headless')">Headless / REST</button>
+          <button class="btn-option lc-cms-btn"          data-value="andere"     onclick="selectLcCms('andere')">Nog niet bekend</button>
+        </div>
+      </div>
+
+      <div id="lc-endpoint-row" class="field" style="margin-top:20px">
+        <label>CMS API-endpoint <span style="font-weight:400;color:var(--mid-grey)">(optioneel)</span></label>
+        <div class="hint">Laat leeg als je dit later in de code wil invullen</div>
+        <input type="text" id="lc-cms-endpoint" placeholder="https://api.uw-cms.nl/v1/pages" style="margin-top:6px" />
+      </div>
+
+      <div class="field" style="margin-top:20px">
+        <label>Naam van de environment variable voor de CMS API-key</label>
+        <input type="text" id="lc-cms-keyname" placeholder="CMS_API_KEY" />
+      </div>
+
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--light-grey)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="lc-migration-toggle" onchange="toggleMigrationSection()" style="width:16px;height:16px;accent-color:var(--purple);flex-shrink:0">
+          <span style="font-weight:600;font-size:14px">Migratie-module inschakelen</span>
+        </label>
+        <div class="hint" style="margin-top:5px;margin-left:26px">Voegt 7 extra tools toe: redirect-mapping, bulk CMS-beheer en Excel/CSV import/export</div>
+
+        <div id="lc-migration-section" style="display:none;margin-top:16px">
+          <div class="field">
+            <label>Redirect-uitvoerformaat <span style="font-weight:400;color:var(--mid-grey)">(standaard Vercel)</span></label>
+            <div class="hint">Vercel is de standaard. Kies een uitzondering als de klant op een ander platform draait.</div>
+            <div class="btn-group" style="margin-top:8px;flex-wrap:wrap">
+              <button class="btn-option lc-redirect-btn selected" data-value="vercel"   onclick="selectRedirectFormat('vercel')">Vercel</button>
+              <button class="btn-option lc-redirect-btn"          data-value="netlify"  onclick="selectRedirectFormat('netlify')">Netlify</button>
+              <button class="btn-option lc-redirect-btn"          data-value="htaccess" onclick="selectRedirectFormat('htaccess')">Apache .htaccess</button>
+              <button class="btn-option lc-redirect-btn"          data-value="nginx"    onclick="selectRedirectFormat('nginx')">nginx.conf</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--light-grey)">
+        <p style="font-size:13px;color:var(--mid-grey);margin-bottom:16px;line-height:1.5">
+          De ZIP bevat een werkende LangChain agent met 6 content-tools (+ 7 migratie-tools indien ingeschakeld), Vercel API-endpoints en alle gegenereerde kennisbestanden. Deploy in je eigen Vercel-project.
+        </p>
+        <button class="btn-generate" style="width:100%" onclick="confirmLangChainDownload()">
+          ↓ Genereer &amp; download LangChain Agent
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── File upload ────────────────────────────────────────────────────────────
+let uploadedFiles = []; // { name, size, mediaType, data }
+let customTemplateFile = null; // { name, size, data, isPdf }
+
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(fileList) {
+  const status = document.getElementById('analyse-status');
+  status.textContent = '';
+  status.className = 'analyse-status';
+
+  Array.from(fileList).forEach(file => {
+    if (file.size > 3 * 1024 * 1024) {
+      status.textContent = `"${file.name}" is te groot (max. 3 MB)`;
+      status.className = 'analyse-status error';
+      return;
+    }
+    if (uploadedFiles.find(f => f.name === file.name)) return;
+
+    const reader = new FileReader();
+    const isPdf = file.type === 'application/pdf';
+
+    reader.onload = e => {
+      const data = isPdf
+        ? e.target.result.split(',')[1] // base64 only
+        : e.target.result;              // plain text
+
+      uploadedFiles.push({
+        name: file.name,
+        size: file.size,
+        mediaType: isPdf ? 'application/pdf' : 'text/plain',
+        data,
+      });
+      renderUploadedFiles();
+    };
+
+    if (isPdf) reader.readAsDataURL(file);
+    else reader.readAsText(file);
+  });
+}
+
+
+function renderUploadedFiles() {
+  const container = document.getElementById('uploaded-files');
+  container.innerHTML = '';
+  uploadedFiles.forEach((f, i) => {
+    const ext = f.name.split('.').pop().toUpperCase();
+    const kb = f.size < 1024 * 1024
+      ? Math.round(f.size / 1024) + ' KB'
+      : (f.size / 1024 / 1024).toFixed(1) + ' MB';
+
+    container.innerHTML += `
+      <div class="uploaded-file">
+        <div class="file-icon">${ext}</div>
+        <span class="file-name">${f.name}</span>
+        <span class="file-size">${kb}</span>
+        <button class="file-remove" onclick="removeFile(${i})" title="Verwijder">×</button>
+      </div>`;
+  });
+  document.getElementById('btn-analyse').disabled = uploadedFiles.length === 0;
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  renderUploadedFiles();
+}
+
+function handleTemplateFile(fileList) {
+  const file = fileList[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    alert(`"${file.name}" is te groot (max. 3 MB)`);
+    return;
+  }
+  const reader = new FileReader();
+  const isPdf = file.type === 'application/pdf';
+  reader.onload = e => {
+    customTemplateFile = { name: file.name, size: file.size, data: e.target.result, isPdf };
+    renderTemplateFile();
+  };
+  if (isPdf) reader.readAsDataURL(file);
+  else reader.readAsText(file);
+}
+
+function renderTemplateFile() {
+  const container = document.getElementById('template-file-display');
+  if (!customTemplateFile) { container.innerHTML = ''; return; }
+  const ext = customTemplateFile.name.split('.').pop().toUpperCase();
+  const kb = customTemplateFile.size < 1024 * 1024
+    ? Math.round(customTemplateFile.size / 1024) + ' KB'
+    : (customTemplateFile.size / 1024 / 1024).toFixed(1) + ' MB';
+  container.innerHTML = `
+    <div class="uploaded-file" style="margin-top:8px">
+      <div class="file-icon">${ext}</div>
+      <span class="file-name">${customTemplateFile.name}</span>
+      <span class="file-size">${kb}</span>
+      <button class="file-remove" onclick="removeTemplateFile()" title="Verwijder">×</button>
+    </div>`;
+}
+
+function removeTemplateFile() {
+  customTemplateFile = null;
+  const inp = document.getElementById('template-file-input');
+  if (inp) inp.value = '';
+  renderTemplateFile();
+}
+
+const templateUploadZone = document.getElementById('template-upload-zone');
+if (templateUploadZone) {
+  templateUploadZone.addEventListener('dragover', e => { e.preventDefault(); templateUploadZone.classList.add('drag-over'); });
+  templateUploadZone.addEventListener('dragleave', () => templateUploadZone.classList.remove('drag-over'));
+  templateUploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    templateUploadZone.classList.remove('drag-over');
+    handleTemplateFile(e.dataTransfer.files);
+  });
+}
+
+// ── Analyse & auto-fill ───────────────────────────────────────────────────
+async function analyseFiles() {
+  const btn = document.getElementById('btn-analyse');
+  const label = document.getElementById('analyse-label');
+  const status = document.getElementById('analyse-status');
+
+  btn.disabled = true;
+  label.innerHTML = '<div class="spinner"></div> Analyseren…';
+  status.textContent = '';
+  status.className = 'analyse-status';
+
+  try {
+    const res = await fetch('/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: uploadedFiles.map(f => ({ name: f.name, mediaType: f.mediaType, data: f.data })),
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error || 'Onbekende fout');
+    }
+
+    applyFields(json.fields);
+    status.textContent = '✓ Velden ingevuld op basis van de documenten — controleer en pas aan waar nodig';
+    status.className = 'analyse-status success';
+  } catch (err) {
+    status.textContent = 'Fout: ' + err.message;
+    status.className = 'analyse-status error';
+  } finally {
+    btn.disabled = false;
+    label.textContent = 'Opnieuw analyseren';
+  }
+}
+
+function applyFields(fields) {
+  // Simple text fields
+  const textMap = {
+    CLIENT_NAME: 'CLIENT_NAME', AGENCY_NAME: 'AGENCY_NAME', DATUM: 'DATUM',
+    TOON_OMSCHRIJVING: 'TOON_OMSCHRIJVING', TOON_VERMIJDEN: 'TOON_VERMIJDEN',
+    MERKWAARDEN_LIJST: 'MERKWAARDEN_LIJST',
+    SITEMAP_BESTANDSNAAM: 'SITEMAP_BESTANDSNAAM',
+    DOELGROEP_ROL: 'DOELGROEP_ROL', DOELGROEP_SECTOR: 'DOELGROEP_SECTOR',
+    DOELGROEP_VOCABULAIRE: 'DOELGROEP_VOCABULAIRE', DOELGROEP_WANTROUWEN: 'DOELGROEP_WANTROUWEN',
+  };
+  Object.entries(textMap).forEach(([key, id]) => {
+    if (fields[key]) {
+      const el = document.getElementById(id);
+      if (el) { el.value = fields[key]; el.classList.add('ai-filled'); }
+    }
+  });
+
+  // Button groups
+  if (fields.AANSPREEKVORM) selectBtnGroup('AANSPREEKVORM', fields.AANSPREEKVORM);
+  if (fields.JARGON_BELEID) selectBtnGroup('JARGON_BELEID', fields.JARGON_BELEID);
+  if (fields.DOELGROEP_NIVEAU) selectBtnGroup('DOELGROEP_NIVEAU', fields.DOELGROEP_NIVEAU);
+  if (fields.TAAL) selectBtnGroup('TAAL', fields.TAAL);
+  if (fields.DOELMARKT) selectBtnGroup('DOELMARKT', fields.DOELMARKT);
+  if (fields.LEESNIVEAU) selectBtnGroup('LEESNIVEAU', fields.LEESNIVEAU);
+  if (fields.ZINSSTRUCTUUR) selectBtnGroup('ZINSSTRUCTUUR', fields.ZINSSTRUCTUUR);
+
+  // Paired lists
+  if (Array.isArray(fields.pijlers) && fields.pijlers.length) {
+    pairedData['pijlers'] = fields.pijlers;
+    renderPaired('pijlers');
+  }
+  if (Array.isArray(fields.producten) && fields.producten.length) {
+    pairedData['producten'] = fields.producten;
+    renderPaired('producten');
+  }
+  if (Array.isArray(fields.begrippen) && fields.begrippen.length) {
+    // begrippen come in as [{term, uitleg}] — map to {naam, desc}
+    pairedData['begrippen'] = fields.begrippen.map(b => ({ naam: b.term || b.naam || '', desc: b.uitleg || b.desc || '' }));
+    renderPaired('begrippen');
+  }
+  if (Array.isArray(fields.guardrails) && fields.guardrails.length) {
+    pairedData['guardrails'] = fields.guardrails.map(g => ({ naam: g.gedrag || g.naam || '', desc: g.reden || g.desc || '' }));
+    renderPaired('guardrails');
+  }
+
+  // Chip lists
+  const chipMap = {
+    verboden: 'verboden', org: 'org', wet: 'wet',
+    product: 'product', locatie: 'locatie', overig: 'overig',
+    zorgen: 'zorgen', uitkomsten: 'uitkomsten', strategie: 'strategie',
+  };
+  if (Array.isArray(fields.externe_bronnen) && fields.externe_bronnen.length) {
+    chipData['externe-bronnen'] = fields.externe_bronnen;
+    renderChips('externe-bronnen');
+    document.getElementById('chips-externe-bronnen')?.classList.add('ai-filled');
+  }
+  Object.entries(chipMap).forEach(([key, id]) => {
+    if (Array.isArray(fields[key]) && fields[key].length) {
+      chipData[id] = fields[key];
+      renderChips(id);
+      document.getElementById('chips-' + id)?.classList.add('ai-filled');
+    }
+  });
+
+  updateProgress();
+}
+
+function selectBtnGroup(field, value) {
+  const group = document.querySelector(`.btn-group[data-field="${field}"]`);
+  if (!group) return;
+  group.querySelectorAll('.btn-option').forEach(btn => {
+    if (btn.dataset.value === value) {
+      btn.classList.add('selected');
+      btnGroupValues[field] = value;
+    } else {
+      btn.classList.remove('selected');
+    }
+  });
+}
+
+// ── Template ──────────────────────────────────────────────────────────────
+const TEMPLATE = `# [CLIENT_NAME] | [AGENCY_NAME] | v3.0 | [DATUM]
+
+agent:
+  naam: "[CLIENT_NAME] Content Agent"
+  taal: nl-NL
+  doel: "Content-assistent van [CLIENT_NAME]. Schrijft webteksten op basis van kennisbank, stijldocumenten en SEO-standaarden — feitelijk onderbouwd en extracteerbaar."
+
+intake:
+  gedragsregel: "Stel alle vragen in één bericht. Sla beantwoorde over. Begin na ontvangst. Speculeer nooit."
+  vragen: ["Toekomstige URL?", "Zoekwoorden (primair/secundair/long-tail)?", "Bronartikelen of bestaande pagina's (geef alles mee)?", "Doel (informeren/converteren/positioneren/navigeren)?", "Doelgroep (concreet)?", "Paginatype (dienstpagina/productpagina/artikelpagina/anders)?"]
+  consolidatie: "Meerdere bronpagina's → consolidatiemodus: inventariseer unieke info, verwijder duplicaten, structureer naar template, herschrijf volledig (nooit kopiëren), vul gaten via kennisbank. Resultaat: één coherente pagina."
+
+schrijfkwaliteit:
+  - Grammaticaal correct Nederlands (Taalunie). Geen onnodige hoofdletters. Geen anglicismen.
+  - Actieve zinnen: onderwerp → werkwoord → voorwerp. Nooit "er wordt/is". Max. [MAX_WOORDEN_PER_ZIN] woorden per zin.
+  - Dezelfde term voor hetzelfde begrip. Geen synoniemrotatie. Geen herhaling.
+  - Omgekeerde piramide: belangrijkste bovenaan — kop, eerste zin, eerste alinea.
+
+tone_of_voice:
+  aanspreekvorm: "[AANSPREEKVORM]"     # "je/jij" of "u" — nooit wisselen
+  toon: "[TOON_OMSCHRIJVING]"
+  vermijd_toon: "[TOON_VERMIJDEN]"
+  vakjargon: "[JARGON_BELEID]"         # "minimaal" / "branche-specifiek" / "ruim"
+  vakjargon_regel: "Introduceer vakbegrip bij eerste gebruik met korte toelichting tussen haakjes of in de zin."
+  merkwaarden: "[MERKWAARDEN_LIJST]"
+  merkwaarden_regel: "Merkwaarden impliciet terugkomen. Nooit letterlijk benoemen."
+  verboden_woorden: ["[VERBODEN_1]", "[VERBODEN_2]", "[VERBODEN_N]"]
+  stijldocumenten:
+    # merkdocument = WAT de organisatie is (inhoudelijke input) | schrijfwijzer = HOE taal (wint op spelling) | tov = HOE toon (wint op merkpersoonlijkheid)
+    merkdocument:  {aanwezig: [MERKDOCUMENT_AANWEZIG],  bestandsnaam: "[MERKDOCUMENT_BESTANDSNAAM]"}
+    schrijfwijzer: {aanwezig: [SCHRIJFWIJZER_AANWEZIG], bestandsnaam: "[SCHRIJFWIJZER_BESTANDSNAAM]"}
+    tov_document:  {aanwezig: [TOV_DOCUMENT_AANWEZIG],  bestandsnaam: "[TOV_DOCUMENT_BESTANDSNAAM]"}
+  stijldocumenten_regel: "Raadpleeg aanwezige documenten vóór schrijven. Ontbreekt aanwezig gemarkeerd document: meld, wacht op bevestiging."
+
+seo_en_geo:
+  - Één concept per alinea (50–150 woorden). Zelfstandig leesbaar.
+  - Front-loading: feitelijk antwoord in eerste zin (max. 160 tekens).
+  - Koppen zijn volledige vragen of stellingen. Vraagkop → direct antwoord in eerste zin.
+  - Semantic triple: onderwerp → werkwoord → voorwerp. Entiteiten altijd bij naam.
+  - Nooit starten met "het/deze/hij/zij" als onderwerp al in vorige zin stond.
+  - Open met context-zin; sluit af met feitelijke conclusie die AI 1-op-1 overneemt.
+  - Geen fluff. Vervang "de beste", "hoogwaardig", "veel" door feiten en cijfers.
+  - Lijst bij drie of meer items. Vergelijkingen en specificaties → Markdown-tabel.
+  - Geschikt voor FAQ-schema en HowTo-schema. Expertisegedreven, geen woorddoel.
+  interne_linking:
+    sitemap: "[SITEMAP_BESTANDSNAAM]"
+    sitemap_regel: "Raadpleeg vóór schrijven. Ontbreekt: meld, geen links. URL ontbreekt: leid hiërarchie af uit URL-structuur."
+    regels:
+      - "Bovenliggende pagina: URL minus laatste slug. Ankertekst = paginanaam of primair zoekwoord."
+      - "Max. [MAX_CLUSTER_LINKS] clusterpaginalinks, alleen inhoudelijk passend."
+      - "Artikel/expertisepagina: min. één link naar meest logische product-/dienstpagina."
+      - "Ankertekst altijd beschrijvend. Nooit: 'hier', 'klik hier' of kale URL."
+      - "Externe links: alleen officiële bronnen, target='_blank', nooit concurrenten."
+
+kennisbronnen:
+  regel: "Alleen onderstaande bronnen. Verzin geen feiten. Ontbrekend → meld wat nodig is."
+  # Hogere prioriteit wint bij conflict.
+  1_wetgeving:       ["[WETGEVING_1]", "[WETGEVING_N]"]
+  2_kennisbank:      ["[KENNISBANK_1]", "[KENNISBANK_N]"]
+  3_gebruikersinput: "Vult kennisbank aan. Overschrijft wetgeving nooit."
+
+output_templates:
+  zoekwoorden:
+    primair:   {woorden: ["[PRIMAIR_1]", "[PRIMAIR_2]"], min: [MIN_PRIMAIR]}
+    secundair: {woorden: ["[SEC_1]", "[SEC_2]", "[SEC_N]"], min: [MIN_SEC]}
+    long_tail: ["[LONG_TAIL_1]", "[LONG_TAIL_2]"]
+    regel: "Semantisch verweven. Nooit gestapeld of buiten context."
+  entiteiten:
+    regel: "Verwerk natuurlijk. Introduceer bij eerste gebruik. Zelfde schrijfwijze. Niet passend → weglaten + melden."
+    organisaties:       ["[ORG_1]", "[ORG_N]"]
+    wet_en_regelgeving: ["[WET_1]", "[WET_N]"]
+    vakbegrippen:       ["[BEGRIP_1]", "[BEGRIP_N]"]
+    producten_diensten: ["[PRODUCT_1]", "[PRODUCT_N]"]
+    locaties:           ["[LOCATIE_1]", "[LOCATIE_N]"]
+    overig:             ["[OVERIG_1]", "[OVERIG_N]"]
+  zoekintenties:
+    informatief:    "[INFORMATIEVE_VRAAG]"
+    commercieel:    "[COMMERCIELE_VRAAG]"
+    navigationeel:  "[NAVIGATIONELE_VRAAG]"
+    transactioneel: "[TRANSACTIONELE_VRAAG]"
+  meta:
+    title:       "Max. 60 tekens. Primair zoekwoord. Geen punt of onnodige hoofdletters."
+    description: "140–160 tekens. Primair zoekwoord + belofte of CTA. Geen marketingtaal."
+    slug:        "Kleine letters, koppeltekens, geen stopwoorden, max. 5 woorden."
+  paginatypen:
+    # Format: [kop, doel]
+    dienstpagina:
+      - ["Wat doet [DIENST] precies?",         "Directe definitie, max. 100 woorden."]
+      - ["Voor wie is [DIENST] geschikt?",      "Doelgroep en probleemomschrijving."]
+      - ["Hoe werkt [DIENST]?",                 "Max. 5 stappen als genummerde lijst."]
+      - ["Wat zijn de kosten van [DIENST]?",    "Prijsindicatie of tabel."]
+      - ["Waarom [CLIENT_NAME] voor [DIENST]?", "Max. 3 feitelijk onderbouwde argumenten."]
+      - ["[CTA-KOP]",                           "Één duidelijke call-to-action."]
+    productpagina:
+      - ["Wat is [PRODUCT]?",                                 "Definitie, max. 80 woorden."]
+      - ["Wat zijn de specificaties van [PRODUCT]?",          "Specificatietabel."]
+      - ["Wat zijn de voordelen van [PRODUCT]?",              "Max. 4 voordelen als lijst, elk met feit."]
+      - ["[PRODUCT] vs. [ALTERNATIEF]: wat is het verschil?", "Vergelijkingstabel."]
+      - ["Hoe bestel of vraag ik [PRODUCT] aan?",             "Kort proces + CTA."]
+    artikelpagina:
+      - ["[HOOFDVRAAG]",               "Directe beantwoording in max. 150 woorden. Featured snippet-alinea."]
+      - ["[SUBVRAAG 1]",               "Verdieping deelonderwerp 1."]
+      - ["[SUBVRAAG 2]",               "Verdieping deelonderwerp 2."]
+      - ["[SUBVRAAG N]",               "Voeg subvragen toe naar behoefte."]
+      - ["Conclusie: [kernboodschap]", "Max. 100 woorden + min. één link naar product-/dienstpagina."]
+
+rationale:
+  gedragsregel: "Self-check vóór aflevering. Herstel elke nee. Sluit altijd af met rationale-blok."
+  self_check:
+    - "Alle templateonderdelen aanwezig? Feitelijk antwoord in eerste zin? Zoekwoorden op positie?"
+    - "Entiteiten toegelicht? Aanspreekvorm consistent? Geen verboden woorden? Geen passieve zinnen?"
+    - "Bovenliggende pagina gelinkt? Elk feit herleidbaar naar escalatieladder-bron?"
+  template: |
+    ---
+    ## Rationale
+    **Kennisbronnen** ✓/! — [bron → informatie → locatie]
+    **Zoekwoorden** ✓/! — [woord → locatie in tekst]
+    **Zoekintenties** ✓/! — [intentie → sectie]
+    **Entiteiten** ✓/! — [verwerkt / weggelaten + reden]
+    **Tone of voice** ✓/! — [aanspreekvorm, jargon, verboden woorden]
+    **Interne linking** ✓/! — [bovenliggende pagina, cluster, productlink]
+    **SEO & opmaak** ✓/! — [structuurbeslissingen]
+    **Consolidatie** ✓/!/n.v.t. — [bronnen samengevoegd]
+
+    ### Jouw volgende stap
+    - [ ] [Actie 1]
+    > Geen acties? Pagina klaar voor publicatie.
+    ---
+`;
+
+// ── Paired list (naam + omschrijving) ────────────────────────────────────
+const pairedData = {};
+
+const pairedPlaceholders = {
+  pijlers:    ['Naam pijler…',    'Omschrijving (één zin)…'],
+  producten:  ['Productnaam…',    'Kernfunctie of voornaamste voordeel…'],
+  begrippen:  ['Vakterm…',        'Hoe introduceren? (bijv. "bij eerste gebruik uitleggen als…")'],
+  guardrails: ['Wat is verboden…','Reden of context…'],
+};
+
+function addPairedItem(id, naam = '', desc = '') {
+  if (!pairedData[id]) pairedData[id] = [];
+  pairedData[id].push({ naam, desc });
+  renderPaired(id);
+}
+
+function renderPaired(id) {
+  const container = document.getElementById('paired-' + id);
+  if (!container) return;
+  container.innerHTML = '';
+  const ph = pairedPlaceholders[id] || ['Naam…', 'Omschrijving…'];
+  (pairedData[id] || []).forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'paired-row';
+    row.innerHTML = `
+      <input type="text" value="${escapeHtml(item.naam)}" placeholder="${ph[0]}"
+        oninput="pairedData['${id}'][${i}].naam=this.value;updateProgress()" />
+      <input type="text" value="${escapeHtml(item.desc)}" placeholder="${ph[1]}"
+        oninput="pairedData['${id}'][${i}].desc=this.value;updateProgress()" />
+      <button class="btn-remove" onclick="removePaired('${id}',${i})" title="Verwijder">×</button>`;
+    container.appendChild(row);
+  });
+  updateProgress();
+}
+
+function removePaired(id, i) {
+  pairedData[id].splice(i, 1);
+  renderPaired(id);
+}
+
+function getPaired(id) {
+  return (pairedData[id] || []).filter(item => item.naam.trim());
+}
+
+// ── Chip input ────────────────────────────────────────────────────────────
+const chipData = {};
+
+function focusChipInput(container) {
+  container.querySelector('input').focus();
+}
+
+function handleChipKey(e, id) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const val = e.target.value.trim().replace(/,$/, '');
+  if (!val) return;
+  addChip(id, val);
+  e.target.value = '';
+  updatePreview();
+}
+
+function addChip(id, value) {
+  if (!chipData[id]) chipData[id] = [];
+  chipData[id].push(value);
+  renderChips(id);
+}
+
+function removeChip(id, index) {
+  chipData[id].splice(index, 1);
+  renderChips(id);
+  updatePreview();
+}
+
+function renderChips(id) {
+  const container = document.getElementById('chips-' + id);
+  const input = container.querySelector('input');
+  // Remove old chips
+  container.querySelectorAll('.chip').forEach(c => c.remove());
+  // Insert chips before input
+  (chipData[id] || []).forEach((val, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>${escapeHtml(val)}</span><span class="chip-x" onclick="removeChip('${id}',${i})">×</span>`;
+    container.insertBefore(chip, input);
+  });
+}
+
+function getChips(id) {
+  return chipData[id] || [];
+}
+
+// ── Button groups ─────────────────────────────────────────────────────────
+const btnGroupValues = {};
+
+document.querySelectorAll('.btn-group').forEach(group => {
+  const field = group.dataset.field;
+  group.querySelectorAll('.btn-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      btnGroupValues[field] = btn.dataset.value;
+      updatePreview();
+    });
+  });
+});
+
+// ── Output generation ─────────────────────────────────────────────────────
+function toYamlList(items) {
+  if (!items.length) return null;
+  return '[' + items.map(i => `"${i}"`).join(', ') + ']';
+}
+
+function replaceList(str, pattern, items) {
+  const list = toYamlList(items);
+  if (!list) return str;
+  return str.split(pattern).join(list);
+}
+
+function generateOutput() {
+  let out = TEMPLATE;
+
+  // List replacements
+  out = replaceList(out, '["[VERBODEN_1]", "[VERBODEN_2]", "[VERBODEN_N]"]', getChips('verboden'));
+  out = replaceList(out, '["[WETGEVING_1]", "[WETGEVING_N]"]',               getChips('wetgeving'));
+  out = replaceList(out, '["[KENNISBANK_1]", "[KENNISBANK_N]"]',             getChips('kennisbank'));
+  out = replaceList(out, '["[ORG_1]", "[ORG_N]"]',                           getChips('org'));
+  out = replaceList(out, '["[WET_1]", "[WET_N]"]',                           getChips('wet'));
+  out = replaceList(out, '["[BEGRIP_1]", "[BEGRIP_N]"]',                     getChips('begrip'));
+  out = replaceList(out, '["[PRODUCT_1]", "[PRODUCT_N]"]',                   getChips('product'));
+  out = replaceList(out, '["[LOCATIE_1]", "[LOCATIE_N]"]',                   getChips('locatie'));
+  out = replaceList(out, '["[OVERIG_1]", "[OVERIG_N]"]',                     getChips('overig'));
+
+  // Simple fields
+  const simpleFields = [
+    'CLIENT_NAME', 'AGENCY_NAME', 'DATUM', 'MAX_WOORDEN_PER_ZIN',
+    'TOON_OMSCHRIJVING', 'TOON_VERMIJDEN', 'MERKWAARDEN_LIJST',
+    'MERKDOCUMENT_BESTANDSNAAM', 'SCHRIJFWIJZER_BESTANDSNAAM', 'TOV_DOCUMENT_BESTANDSNAAM',
+    'SITEMAP_BESTANDSNAAM', 'MAX_CLUSTER_LINKS',
+    'MIN_PRIMAIR', 'MIN_SEC',
+    'INFORMATIEVE_VRAAG', 'COMMERCIELE_VRAAG', 'NAVIGATIONELE_VRAAG', 'TRANSACTIONELE_VRAAG',
+  ];
+  for (const id of simpleFields) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const val = el.value.trim();
+    if (val) out = out.split(`[${id}]`).join(val);
+  }
+
+  // Button group fields
+  for (const [id, val] of Object.entries(btnGroupValues)) {
+    if (val) out = out.split(`[${id}]`).join(val);
+  }
+
+  // Boolean toggles (no quotes in YAML)
+  ['MERKDOCUMENT_AANWEZIG', 'SCHRIJFWIJZER_AANWEZIG', 'TOV_DOCUMENT_AANWEZIG'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) out = out.split(`[${id}]`).join(el.checked ? 'true' : 'false');
+  });
+
+  return out;
+}
+
+// ── Progress ──────────────────────────────────────────────────────────────
+const TOTAL_FIELDS = 27;
+
+function countFilled() {
+  let n = 0;
+  const simpleIds = [
+    'CLIENT_NAME', 'AGENCY_NAME', 'DATUM',
+    'MAX_WOORDEN_PER_ZIN', 'MAX_WOORDEN_PER_ALINEA',
+    'TOON_OMSCHRIJVING', 'TOON_VERMIJDEN', 'MERKWAARDEN_LIJST',
+    'SITEMAP_BESTANDSNAAM', 'MAX_CLUSTER_LINKS',
+    'DOELGROEP_ROL', 'DOELGROEP_SECTOR', 'DOELGROEP_VOCABULAIRE', 'DOELGROEP_WANTROUWEN',
+  ];
+  simpleIds.forEach(id => { if (document.getElementById(id)?.value.trim()) n++; });
+  if (btnGroupValues['AANSPREEKVORM']) n++;
+  if (btnGroupValues['JARGON_BELEID']) n++;
+  if (btnGroupValues['DOELGROEP_NIVEAU']) n++;
+  if (btnGroupValues['TAAL']) n++;
+  if (btnGroupValues['DOELMARKT']) n++;
+  if (btnGroupValues['LEESNIVEAU']) n++;
+  if (btnGroupValues['ZINSSTRUCTUUR']) n++;
+  if (getPaired('pijlers').length) n++;
+  if (getPaired('producten').length) n++;
+  if (getPaired('begrippen').length) n++;
+  if (getPaired('guardrails').length) n++;
+  if (getChips('uitkomsten').length) n++;
+  if (getChips('externe-bronnen').length) n++;
+  return n;
+}
+
+function updateProgress() {
+  const filled = countFilled();
+  const pct = Math.round((filled / TOTAL_FIELDS) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${filled} van ${TOTAL_FIELDS} ingevuld`;
+  const hint = document.getElementById('bottom-hint');
+  hint.textContent = pct === 100 ? 'Alle velden ingevuld — klaar om te genereren' : `${filled} van ${TOTAL_FIELDS} velden ingevuld`;
+}
+
+// ── Preview / open placeholders ───────────────────────────────────────────
+const INTENTIONAL = new Set([
+  'DIENST','PRODUCT','ALTERNATIEF','CTA-KOP','HOOFDVRAAG',
+  'SUBVRAAG 1','SUBVRAAG 2','SUBVRAAG N','kernboodschap','Actie 1',
+  'bron → informatie → locatie','woord → locatie in tekst',
+  'intentie → sectie','verwerkt / weggelaten + reden',
+  'aanspreekvorm, jargon, verboden woorden',
+  'bovenliggende pagina, cluster, productlink',
+  'structuurbeslissingen','bronnen samengevoegd',
+]);
+
+function countOpen(text) {
+  return (text.match(/\[([^\]\n]+)\]/g) || [])
+    .filter(m => !INTENTIONAL.has(m.slice(1,-1))).length;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updatePreview() {
+  updateProgress();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+function openModal() {
+  const output = generateOutput();
+  const escaped = escapeHtml(output);
+  const highlighted = escaped.replace(/\[([^\]\n&]+)\]/g, (match, inner) => {
+    if (INTENTIONAL.has(inner)) return match;
+    return `<span class="ph">${match}</span>`;
+  });
+  document.getElementById('output-code').innerHTML = highlighted;
+
+  const open = countOpen(output);
+  const badge = document.getElementById('open-count');
+  if (open > 0) {
+    badge.textContent = open + ' open';
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function copyOutput() {
+  navigator.clipboard.writeText(generateOutput()).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = 'Gekopieerd!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Kopieer naar klembord';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Output helpers ────────────────────────────────────────────────────────
+function val(id) {
+  return document.getElementById(id)?.value.trim() || '';
+}
+function orFallback(v, fallback) {
+  return v || fallback;
+}
+function mdList(items) {
+  return items.length ? items.map(i => `- ${i}`).join('\n') : '_Niet opgegeven_';
+}
+function chipsToMd(id)     { return mdList(getChips(id)); }
+function chipsToInline(id) {
+  const c = getChips(id);
+  return c.length ? c.join(', ') : '_Niet opgegeven_';
+}
+function pairedToMd(id) {
+  const items = getPaired(id);
+  if (!items.length) return '_Niet opgegeven_';
+  return items.map(p => `**${p.naam}** — ${p.desc}`).join('\n');
+}
+function stijldocToMd() {
+  if (!uploadedFiles.length) return '_Geen stijldocumenten geüpload — voeg ze toe als bijlage in je Custom GPT_';
+  return uploadedFiles.map(f => `- **${f.name}** — raadpleeg voor details die niet in de samenvatting staan`).join('\n');
+}
+
+// ── SETUP.md ──────────────────────────────────────────────────────────────
+function generateSetupMd() {
+  const client = orFallback(val('CLIENT_NAME'), 'de klant');
+  const today  = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  return `# Installatiegids — ${client} Content Agent
+
+Gegenereerd op ${today} door Goldfizh Content Agent Builder.
+
+---
+
+## Stap 1 — Voeg de instructies toe
+
+Open je Custom GPT, Gemini Gem of Microsoft Copilot en plak de volledige inhoud van **\`system-prompt.md\`** in het **Instructions**-veld (of equivalent). Dit bestand is de kern van de agent — het bevat alle werkinstructies.
+
+---
+
+## Stap 2 — Upload de vier kennisbijlagen
+
+Upload de onderstaande bestanden als **Knowledge**-bijlagen. Houd deze volgorde aan:
+
+| # | Bestand | Inhoud |
+|---|---------|--------|
+| 1 | \`brand.md\` | Tone of voice, merkwaarden, doelgroep, communicatiepijlers |
+| 2 | \`seo.md\` | SEO- en GEO-richtlijnen (universeel) |
+| 3 | \`templates.md\` | Paginastructuren en contenttemplates |
+| 4 | \`knowledge.md\` | Productcatalogus, entiteiten, kennisbronnen |
+
+---
+
+## Stap 3 — Voeg extra documenten toe (aanbevolen)
+
+Je hebt nog **${customTemplateFile ? 5 : 6} attachment-slots** beschikbaar. Gebruik die voor de originele brondocumenten zodat de agent altijd de meest actuele informatie kan raadplegen:
+
+- [ ] Merkdocument of brand guidelines (volledig document)
+- [ ] Schrijfwijzer of redactiestijlgids
+- [ ] Tone of voice document
+- [ ] Sitemap (${orFallback(val('SITEMAP_BESTANDSNAAM'), 'sitemap.xml')})
+- [ ] Aanvullende kennisbankdocumenten
+- [ ] Productspecificaties, whitepapers of onderzoeksrapporten${customTemplateFile ? `\n\n> **Let op:** je eigen template \`${customTemplateFile.name}\` is al als \`custom-template.${customTemplateFile.isPdf ? 'pdf' : 'md'}\` meegeleverd in dit pakket. Upload dit bestand ook als bijlage in je Custom GPT en vermeld in de instructions dat de agent dit als actief template moet gebruiken in plaats van de standaard sjablonen in \`templates.md\`.` : ''}
+
+> Hoe meer relevante documenten je toevoegt, hoe nauwkeuriger en consistenter de agent schrijft.
+
+---
+
+## Stap 4 — Test de agent
+
+Start met een testpagina. Geef de agent de volgende intake-informatie en beoordeel de output via het rationale-blok onderaan:
+
+1. Toekomstige URL van de pagina
+2. Zoekwoorden (primair, secundair, long-tail)
+3. Doel van de pagina (informeren / converteren / positioneren / navigeren)
+4. Doelgroep (zo concreet mogelijk)
+5. Paginatype (dienstpagina / productpagina / artikelpagina)
+`;
+}
+
+// ── system-prompt.md ──────────────────────────────────────────────────────
+function generateSystemPromptMd() {
+  const client  = orFallback(val('CLIENT_NAME'), '[KLANT]');
+  const agency  = orFallback(val('AGENCY_NAME'), 'Goldfizh');
+  const maxW    = orFallback(val('MAX_WOORDEN_PER_ZIN'), '20');
+  const sitemap = orFallback(val('SITEMAP_BESTANDSNAAM'), 'sitemap.xml');
+  const maxLinks= orFallback(val('MAX_CLUSTER_LINKS'), '5');
+
+  const taal = btnGroupValues['TAAL'] || 'nl-NL';
+  const taalLabel = { 'nl-NL': 'Nederlands', 'en-GB': 'Engels (Brits)', 'en-US': 'Engels (Amerikaans)', 'de-DE': 'Duits' }[taal] || taal;
+  const maxAlinea = orFallback(val('MAX_WOORDEN_PER_ALINEA'), '80');
+  const leesniveau = btnGroupValues['LEESNIVEAU'] || '';
+  const leesniveauLabel = { 'B1': 'B1 — breed publiek, eenvoudig en direct', 'B2': 'B2 — gemiddeld opgeleid zakelijk publiek', 'C1': 'C1 — expert, vakjargon toegestaan' }[leesniveau] || '';
+  const zinsstructuur = btnGroupValues['ZINSSTRUCTUUR'] || '';
+
+  const guardrails = getPaired('guardrails');
+  const guardrailsSection = guardrails.length
+    ? guardrails.map(g => `- **${g.naam}**${g.desc ? ` — ${g.desc}` : ''}`).join('\n')
+    : '_Geen guardrails geconfigureerd_';
+
+  return `# ${client} Content Agent — Instructies
+
+Geconfigureerd door ${agency}.
+
+---
+
+## Identiteit en doel
+
+Jij bent de content agent van **${client}**. Je schrijft productieklare webteksten die presteren in zowel traditionele zoekmachines (Google) als AI-gestuurde zoekmachines (ChatGPT, Perplexity, Google AI Overviews, Microsoft Copilot).
+
+Je schrijft altijd in **${taalLabel}** (${taal}). Houd je consequent aan deze taal, ook in meta-velden en interne notities.
+
+Je werkt altijd vanuit vier verplichte kwaliteitslagen: SEO, GEO, Merk en Strategie. Alle regels per laag staan beschreven in de bijgevoegde kennisdocumenten. Raadpleeg die altijd voor je begint.
+
+---
+
+## Kennisdocumenten
+
+Raadpleeg de volgende bijlagen **altijd en volledig** voordat je begint met schrijven:
+
+| Bestand | Inhoud |
+|---------|--------|
+| \`brand.md\` | Tone of voice, merkwaarden, doelgroep, communicatiepijlers |
+| \`seo.md\` | SEO- en GEO-richtlijnen |
+| \`templates.md\` | Paginastructuren en contenttemplates |
+| \`knowledge.md\` | Productcatalogus, entiteiten, kennisbronnen |
+
+Zijn er extra bestanden bijgevoegd? Raadpleeg die ook. Ontbreekt een genoemde bijlage? Meld dit en wacht op bevestiging voordat je verdergaat.
+
+---
+
+## Intake
+
+Stel bij elke nieuwe opdracht de volgende vragen in **één bericht**. Sla vragen over die de gebruiker al heeft beantwoord. Begin pas na ontvangst van alle antwoorden. Speculeer nooit.
+
+1. Wat is de toekomstige URL van de pagina?
+2. Wat zijn de zoekwoorden? (primair / secundair / long-tail)
+3. Zijn er bronartikelen of bestaande pagina's? (geef alles mee)
+4. Wat is het doel van de pagina? (informeren / converteren / positioneren / navigeren)
+5. Wie is de doelgroep? (zo concreet mogelijk)
+6. Wat is het paginatype? (dienstpagina / productpagina / artikelpagina / anders)
+
+**Consolidatiemodus:** worden meerdere bronpagina's aangeleverd, activeer dan consolidatiemodus. Inventariseer unieke informatie, verwijder duplicaten, structureer naar template en herschrijf volledig. Kopieer nooit. Vul inhoudelijke gaten via de kennisbank.
+
+---
+
+## Kwaliteitslagen
+
+| Laag | Bron | Doel |
+|------|------|------|
+| 1. SEO | \`seo.md\` | Vindbaarheid in zoekmachines |
+| 2. GEO | \`seo.md\` | Citatie door AI-zoekmachines |
+| 3. Merk | \`brand.md\` | Tone of voice, stijl en merkwaarden |
+| 4. Strategie | \`brand.md\` | Commerciële en positioneringsdoelen |
+
+---
+
+## Schrijfkwaliteit
+
+- Grammaticaal correct ${taalLabel}. Geen onnodige hoofdletters. Geen anglicismen.
+- Actieve zinnen: onderwerp → werkwoord → voorwerp. Nooit "er wordt" of "er is". Max. ${maxW} woorden per zin.
+- Max. ${maxAlinea} woorden per alinea. Eén concept per alinea — zelfstandig leesbaar.
+- Dezelfde term voor hetzelfde begrip. Geen synoniemrotatie. Geen herhaling van dezelfde informatie.
+- Omgekeerde piramide: het belangrijkste staat bovenaan — in de kop, de eerste zin en de eerste alinea.
+- Geen fluff. Vervang "de beste", "hoogwaardig" en "veel" door feiten en cijfers.${leesniveauLabel ? `\n- **Leesniveau ${leesniveauLabel}.** Kalibreer zinslengte, woordkeuze en structuurcomplexiteit hierop.` : ''}${zinsstructuur ? `\n- **Zinsstructuur: ${zinsstructuur}.** ${zinsstructuur === 'kort en scanbaar' ? 'Max. één bijzin per zin. Vermijd nesteling.' : zinsstructuur === 'gevarieerd' ? 'Wissel korte en iets langere zinnen af voor ritme en leesbaarheid.' : 'Meerdere bijzinnen per zin zijn toegestaan mits de leesbaarheid niet daalt.'}` : ''}
+
+---
+
+## Interne linking
+
+- Raadpleeg \`${sitemap}\` vóór het schrijven. Ontbreekt de sitemap? Meld dit en plaats geen links.
+- Bovenliggende pagina: URL minus de laatste slug. Ankertekst = paginanaam of primair zoekwoord.
+- Max. ${maxLinks} clusterlinks per pagina, alleen inhoudelijk passend.
+- Artikel- of expertisepagina: minimaal één link naar de meest logische product- of dienstpagina.
+- Ankertekst altijd beschrijvend. Nooit: "hier", "klik hier" of kale URL.
+- Externe links: alleen officiële bronnen, nooit naar concurrenten.
+
+---
+
+## Zelfcheck en rationale
+
+Voer voor elke aflevering een zelfcheck uit. Herstel elke "nee". Sluit **altijd** af met een rationale-blok.
+
+**Zelfcheck:**
+- Alle templateonderdelen aanwezig? Feitelijk antwoord in eerste zin? Zoekwoorden op positie?
+- Entiteiten bij eerste gebruik toegelicht? Aanspreekvorm consistent? Geen verboden woorden?
+- Bovenliggende pagina gelinkt? Elk feit herleidbaar naar een kennisbron?
+
+**Rationale-format:**
+
+\`\`\`
+---
+## Rationale
+**Kennisbronnen** ✓/! — [bron → informatie → locatie in tekst]
+**Zoekwoorden** ✓/! — [woord → locatie in tekst]
+**Entiteiten** ✓/! — [verwerkt / weggelaten + reden]
+**Tone of voice** ✓/! — [aanspreekvorm, jargon, verboden woorden]
+**Interne linking** ✓/! — [bovenliggende pagina, clusterlinks, productlink]
+**SEO & GEO** ✓/! — [structuurbeslissingen]
+
+### Jouw volgende stap
+- [ ] [Actie 1]
+> Geen acties? Pagina klaar voor publicatie.
+---
+\`\`\`
+
+---
+
+## Gedragsregels (guardrails)
+
+De volgende regels zijn absolute grenzen. Geen uitzonderingen, ook niet op uitdrukkelijk verzoek van de gebruiker:
+
+${guardrailsSection}
+`;
+}
+
+// ── brand.md ──────────────────────────────────────────────────────────────
+function generateBrandMd() {
+  const client = orFallback(val('CLIENT_NAME'), '[KLANT]');
+  return `# ${client} — Merkprofiel
+
+Dit document beschrijft hoe ${client} communiceert. Raadpleeg het volledig voor elke tekst die je schrijft.
+
+---
+
+## Aanspreekvorm
+
+Gebruik altijd **${orFallback(val('AANSPREEKVORM'), '[niet ingevuld]')}**. Wissel nooit van aanspreekvorm, ook niet tussen secties of paginatypen.
+
+---
+
+## Tone of voice
+
+**Gewenste toon:** ${orFallback(val('TOON_OMSCHRIJVING'), '_Niet opgegeven_')}
+
+**Vermijd:** ${orFallback(val('TOON_VERMIJDEN'), '_Niet opgegeven_')}
+
+**Vakjargon:** ${orFallback(orFallback(btnGroupValues['JARGON_BELEID'], val('JARGON_BELEID')), '_Niet opgegeven_')}
+Introduceer vakbegrippen bij eerste gebruik met een korte toelichting tussen haakjes of in de zin.
+
+---
+
+## Merkwaarden
+
+${orFallback(val('MERKWAARDEN_LIJST'), '_Niet opgegeven_')}
+
+Merkwaarden komen **impliciet** terug in de tekst. Noem ze nooit letterlijk.
+
+---
+
+## Communicatiepijlers
+
+De volgende thema's vormen de inhoudelijke basis van alle content. Elke pagina sluit aan bij minimaal één pijler:
+
+${pairedToMd('pijlers')}
+
+---
+
+## Kernuitkomsten
+
+De drie resultaten die ${client} levert voor de klant:
+
+${chipsToMd('uitkomsten')}
+
+---
+
+## Contentstrategie
+
+${chipsToMd('strategie')}
+
+---
+
+## Doelgroep
+
+**Rol / functietitel:** ${orFallback(val('DOELGROEP_ROL'), '_Niet opgegeven_')}
+**Sector / branche:** ${orFallback(val('DOELGROEP_SECTOR'), '_Niet opgegeven_')}
+**Kennisniveau:** ${orFallback(btnGroupValues['DOELGROEP_NIVEAU'], '_Niet opgegeven_')}
+
+**Primaire zorgen:**
+${chipsToMd('zorgen')}
+
+**Hoe de doelgroep problemen omschrijft (gebruik hun taal):**
+${orFallback(val('DOELGROEP_VOCABULAIRE'), '_Niet opgegeven_')}
+
+**Wat extra onderbouwing vereist (claims die ze niet zomaar geloven):**
+${orFallback(val('DOELGROEP_WANTROUWEN'), '_Niet opgegeven_')}
+
+---
+
+## Verboden woorden
+
+De volgende woorden mogen **nooit** voorkomen in teksten van ${client}:
+
+${chipsToMd('verboden')}
+
+---
+
+## Stijldocumenten
+
+Raadpleeg de volgende documenten vóór het schrijven. Ontbreekt een document? Meld dit en wacht op bevestiging.
+
+${stijldocToMd()}
+`;
+}
+
+// ── seo.md ────────────────────────────────────────────────────────────────
+function generateSeoMd() {
+  const maxLinks = orFallback(val('MAX_CLUSTER_LINKS'), '5');
+  const sitemap  = orFallback(val('SITEMAP_BESTANDSNAAM'), 'sitemap.xml');
+  const sitemapUrlsRaw = val('SITEMAP_URLS');
+  const sitemapUrls = sitemapUrlsRaw
+    ? sitemapUrlsRaw.split('\n').map(u => u.trim()).filter(Boolean)
+    : [];
+  const urlListSection = sitemapUrls.length
+    ? `\n---\n\n## Bekende pagina-URL's voor interne linking\n\nGebruik onderstaande URL's als ankerpunten bij interne linking. Kies altijd de meest inhoudelijk relevante URL voor de context.\n\n${sitemapUrls.map(u => `- ${u}`).join('\n')}\n`
+    : '';
+  return `# SEO & GEO Richtlijnen
+
+Dit document beschrijft de universele regels voor content die presteert in zowel traditionele zoekmachines als AI-zoekmachines. Pas **alle regels** toe bij elke pagina die je schrijft.
+
+---
+
+## Laag 1 — SEO-regels
+
+| Regel | Detail |
+|-------|--------|
+| Primair zoekwoord in H1 | Verbatim, niet geparafraseerd |
+| Primair zoekwoord in meta_title | Dicht bij het begin, max. 65 tekens |
+| Primair zoekwoord in eerste alinea | Verbatim, in de eerste of tweede zin |
+| Secundaire zoekwoorden in H2/H3 | Minimaal 2, op natuurlijke wijze geplaatst |
+| Koppenstructuur | H1 → H2 → H3, geen niveaus overslaan |
+| Meta description | Max. 155 tekens, duidelijke waardepropositie |
+
+**Meta-velden:**
+- \`meta_title\`: max. 65 tekens. Primair zoekwoord vooraan. Geen punt. Geen onnodige hoofdletters.
+- \`meta_description\`: 140–155 tekens. Primair zoekwoord + belofte of CTA. Geen marketingtaal.
+- \`slug\`: kleine letters, koppeltekens, geen stopwoorden, max. 5 woorden.
+
+---
+
+## Laag 2 — GEO-regels (Generative Engine Optimisation)
+
+### Direct antwoord — Bottom Line Up Front
+
+- Minimaal 4 H2-koppen zijn geformuleerd als directe gebruikersvragen (bijv. "Wat kost een dakkapel gemiddeld?")
+- De eerste zin onder een vraag-H2 beantwoordt de vraag **direct** — geen inleiding, geen context
+- Elke feitelijke zin moet zelfstandig leesbaar zijn: een AI moet hem kunnen citeren zonder de omringende context
+
+### Zelfstandige zinnen
+
+Gebruik nooit voornaamwoorden ("dit", "het", "deze oplossing", "het systeem") zonder het onderwerp in diezelfde zin te benoemen.
+
+- ❌ "Dit zorgt voor een hogere conversie."
+- ✓ "Een geoptimaliseerde landingspagina zorgt voor een hogere conversie."
+
+### Semantische triple-structuur
+
+Feitelijke zinnen volgen de opbouw **Onderwerp → Werkwoord → Object**. Dit is hoe AI-modellen feiten intern opslaan en ophalen.
+
+- ❌ "Voor starters is hypotheekadvies beschikbaar."
+- ✓ "[Organisatie] biedt hypotheekadvies voor starters op de woningmarkt."
+
+### Entiteitsdichtheid boven zoekwoorddichtheid
+
+Herhaal het exacte zoekwoord niet mechanisch. Gebruik het volledige ecosysteem van gerelateerde concepten, productnamen en domeinterminologie. Dit toont vakkennis aan AI-modellen en vergroot de kans op citatie.
+
+### Informatiemeerwaarde
+
+Elke sectie bevat minimaal één feit dat **niet** beschikbaar is in een generiek zoekresultaat. Gebruik specifieke productkenmerken, branchegegevens of precieze specificaties met bron.
+
+### Machine-leesbare opmaak
+
+- Gebruik **opsommingslijsten** voor kenmerken, voordelen, criteria en risicofactoren
+- Gebruik **tabellen** voor vergelijkingen, kostenopbouw en specificaties — verplicht bij vergelijkende content
+- Elke vergelijkingstabel eindigt met een "Bron:"-rij
+
+### Inline bronvermelding
+
+Elk percentage of cijfer wordt **op de plek van gebruik** toegeschreven, niet alleen in een bronnenblok onderaan. Voorbeeld: "Volgens onderzoek van [bron] daalt de responstijd met 40%."
+
+### Beschrijvende ankertekst
+
+Elke CTA en interne link beschrijft exact wat de doelpagina bevat.
+
+- ❌ "Klik hier", "Lees meer", "Meer informatie"
+- ✓ "Lees hoe wij hypotheekadvies voor starters aanpakken"
+
+---
+
+## Interne linking
+
+- Raadpleeg \`${sitemap}\` vóór het schrijven. Ontbreekt de sitemap? Meld dit en plaats geen interne links.
+- **Bovenliggende pagina:** URL minus de laatste slug. Ankertekst = paginanaam of primair zoekwoord.
+- **Max. ${maxLinks} clusterlinks** per pagina, alleen inhoudelijk passend.
+- **Artikel- of expertisepagina:** minimaal één link naar de meest logische product- of dienstpagina.
+- **Ankertekst:** altijd beschrijvend. Nooit: "hier", "klik hier" of kale URL.
+- **Externe links:** alleen officiële bronnen, nooit naar concurrenten.
+
+---
+
+## Alinea- en kopregels
+
+- Eén concept per alinea (50–150 woorden). Zelfstandig leesbaar.
+- Open met een contextzin. Sluit af met een feitelijke conclusie die een AI 1-op-1 kan overnemen.
+- Koppen zijn volledige vragen of stellingen. Vraagkop → direct antwoord in eerste zin.
+- Nooit starten met "het", "deze", "hij" of "zij" als het onderwerp al in de vorige zin stond.
+- Geen fluff: vervang "de beste", "hoogwaardig" en "veel" door feiten en cijfers.
+${urlListSection}`;
+}
+
+// ── templates.md ──────────────────────────────────────────────────────────
+function generateTemplatesMd() {
+  const client = orFallback(val('CLIENT_NAME'), '[KLANT]');
+  const doelmarkt = btnGroupValues['DOELMARKT'] || '';
+  let doelmarktNote = '';
+  if (doelmarkt === 'B2B') {
+    doelmarktNote = `\n> **Doelmarkt: B2B** — Schrijf voor zakelijke beslissers. Nadruk op ROI, procesverbeteringen en zakelijke risico's. Gebruik vakjargon op expertniveau. Vermijd consumentenjargon.\n`;
+  } else if (doelmarkt === 'B2C') {
+    doelmarktNote = `\n> **Doelmarkt: B2C** — Schrijf voor consumenten. Nadruk op persoonlijk voordeel, gemak en emotionele waarde. Vermijd overmatig zakelijk of technisch jargon.\n`;
+  } else if (doelmarkt === 'Beide') {
+    doelmarktNote = `\n> **Doelmarkt: B2B én B2C** — Pas de toon aan per context. Zakelijk als de doelgroep een beslisser of professional is; consumentgericht als de doelgroep een individu is.\n`;
+  }
+
+  return `# Content Templates — ${client}
+${doelmarktNote}
+---
+
+## Standaard paginastructuur
+
+De structuur volgt een bewuste contentfunnel:
+**Bewustwording → Probleemverdieping → Oplossing → Bewijs → Conversie**
+
+| Blok | Naam | Kernelementen |
+|------|------|---------------|
+| 0 | SEO Metadata | meta_title (max. 65 tekens), meta_description (max. 155 tekens), slug |
+| 1 | Hero | H1 (probleem van de doelgroep, max. 8 woorden) |
+| 2 | Kernpunten | H2, exact 3 bullets — elk met een meetbaar resultaat, geen productnamen |
+| 3 | Introductie | H2 als vraag van de doelgroep, alinea (max. 4 zinnen) |
+| 3B | Definitie | H2 "Wat is [onderwerp]?" — gezaghebbende definitie, geen statistieken, geen producten |
+| 4 | Probleemschets | H2 als vraag, 1–2 alinea's, tabel (verplicht), CTA |
+| 5 | Impact | H2 als kostenvraag, 1–2 alinea's met cijfer, optionele tabel, CTA |
+| 6 | Aanpak | H2, per product/dienst: H3 + alinea van 4 zinnen (wat / hoe / data / voordeel), CTA |
+| 7 | USP-lijst | H2, exact 4 USP's (1–2 woord kop + 1 zin met getal of feit) |
+| 8 | Referenties | Placeholder — in te vullen door editor |
+| 9 | FAQ | Exact 7 vragen + antwoorden (praktisch / kosten / ROI / vergelijking / proces / regelgeving / data) |
+| 11 | Bronnen | H2, 3–5 bronnen uit de vertrouwde bronnenlijst in \`knowledge.md\` |
+| 12 | Gerelateerde blogs | Placeholder — 3 kaarten |
+| 13 | Gerelateerde producten/diensten | Placeholder |
+
+---
+
+## Paginatypen
+
+### Dienstpagina
+
+| Kop | Doel |
+|-----|------|
+| Wat doet [dienst] precies? | Directe definitie, max. 100 woorden |
+| Voor wie is [dienst] geschikt? | Doelgroep en probleemomschrijving |
+| Hoe werkt [dienst]? | Max. 5 stappen als genummerde lijst |
+| Wat zijn de kosten van [dienst]? | Prijsindicatie of vergelijkingstabel |
+| Waarom ${client} voor [dienst]? | Max. 3 feitelijk onderbouwde argumenten |
+| [CTA-kop] | Één duidelijke call-to-action |
+
+### Productpagina
+
+| Kop | Doel |
+|-----|------|
+| Wat is [product]? | Definitie, max. 80 woorden |
+| Wat zijn de specificaties van [product]? | Specificatietabel met bronrij |
+| Wat zijn de voordelen van [product]? | Max. 4 voordelen als lijst, elk met feit of cijfer |
+| [Product] vs. [alternatief]: wat is het verschil? | Vergelijkingstabel |
+| Hoe vraag ik [product] aan of bestel ik het? | Kort proces + CTA |
+
+### Artikelpagina
+
+| Kop | Doel |
+|-----|------|
+| [Hoofdvraag] | Directe beantwoording in max. 150 woorden — featured snippet-alinea |
+| [Subvraag 1] | Verdieping deelonderwerp 1 |
+| [Subvraag 2] | Verdieping deelonderwerp 2 |
+| [Meer subvragen] | Voeg toe naar behoefte |
+| Conclusie: [kernboodschap] | Max. 100 woorden + minimaal één link naar product- of dienstpagina |
+
+---
+
+## GEO-proof product- en dienstpagina
+
+Gebruik deze structuur voor product- en dienstpagina's die ook door AI-zoekmachines geciteerd moeten worden.
+
+| Blok | Element | Doel & GEO-instructie |
+|------|---------|----------------------|
+| 0 | SEO Metadata | meta_title (max. 65 tekens, primair zoekwoord vooraan), meta_description (140–155 tekens, zoekwoord + belofte), slug |
+| 1 | Hero H1 | Primair zoekwoord verbatim in H1. Eerste zin = directe definitie van het product of de dienst (semantic triple: [Organisatie] biedt [product] aan voor [doelgroep]) |
+| 2 | Featured snippet | H2 als "Wat is [product/dienst]?" — antwoord in max. 60 woorden, feitelijk, zelfstandig leesbaar. Elke zin citeert de organisatienaam of het product |
+| 3 | Doelgroep | H2 als "Voor wie is [product/dienst] geschikt?" — specifiek, geen vage omschrijvingen. Eindig met herkenbaar probleem van de doelgroep |
+| 4 | Kenmerken | H2 als "Wat zijn de kenmerken van [product/dienst]?" — opsommingslijst, elk punt met feit of meting |
+| 5 | Voordelen | H2 als "Wat zijn de voordelen van [product/dienst]?" — max. 4 voordelen, elk als **kop (1–3 woorden)** + zin met getal of bewijs |
+| 6 | Werking | H2 als "Hoe werkt [product/dienst]?" — genummerde stappen (max. 5), elke stap max. 1 zin. Sluit af met een uitkomstzin |
+| 7 | Vergelijking | H2 als "[Product A] vs. [Product B]: wat is het verschil?" — verplichte vergelijkingstabel met bronrij |
+| 8 | Kosten | H2 als "Wat kost [product/dienst]?" — prijsindicatie of tabel. Nooit vage formuleringen. Eindig met CTA |
+| 9 | Bewijs | H2 als "Waarom [Organisatie] voor [product/dienst]?" — max. 3 argumenten, elk onderbouwd met feit, cijfer of referentie |
+| 10 | FAQ | Exact 5–7 vragen die de doelgroep stelt — geformuleerd als H3-vraagkoppen. Elk antwoord max. 50 woorden, direct en feitelijk |
+| 11 | CTA | H2 als actiekop (beschrijvend, geen "klik hier") — één duidelijke call-to-action |
+| 12 | Bronnen | H2 "Bronnen" — 2–4 verwijzingen naar vertrouwde externe bronnen uit \`knowledge.md\` |
+
+**GEO-checks voor product/dienstpagina's:**
+- Elke sectie start met een vraag-H2 → eerste zin beantwoordt direct
+- Organisatienaam en productnaam komen elk minimaal 3× voor op de pagina, altijd volledig uitgeschreven
+- Geen alinea die begint met een voornaamwoord zonder bijpassend zelfstandig naamwoord in diezelfde zin
+- Elk feit heeft een inline bronvermelding ("Volgens [bron], ...")
+
+---
+
+## Schrijfregels per element
+
+### Koppen
+- Max. 8 woorden
+- Geformuleerd als directe vraag of stellende kop die aandacht verdient
+- Sentence case — geen onnodige hoofdletters
+- Vraagkop → eerste zin beantwoordt de vraag direct
+
+### Alinea's
+- Max. 3 zinnen en 60 woorden
+- Open met contextzin, sluit af met feitelijke conclusie
+- Geen openers als "In dit artikel…", "Het is belangrijk…" of "Als [doelgroep]…"
+- Eén idee per alinea — zelfstandig leesbaar
+
+### Lijsten en tabellen
+- Lijst bij drie of meer vergelijkbare items
+- Tabel bij vergelijkingen, specificaties of kostenopbouw
+- Elke tabel eindigt met een "Bron:"-rij
+
+### CTA's
+- Één actie per blok
+- Ankertekst beschrijft de bestemming exact — nooit "klik hier"
+`;
+}
+
+// ── knowledge.md ──────────────────────────────────────────────────────────
+function generateKnowledgeMd() {
+  const client = orFallback(val('CLIENT_NAME'), '[KLANT]');
+
+  // Vakbegrippen as paired list
+  const begrippen = getPaired('begrippen');
+  const begrippensSection = begrippen.length
+    ? begrippen.map(b => `**${b.naam}** — ${b.desc || '_geen instructie_'}`).join('\n')
+    : '_Niet opgegeven_';
+
+  // Externe bronnen
+  const externeBronnen = getChips('externe-bronnen');
+  const externeBronnenSection = externeBronnen.length
+    ? `\n**4. Vertrouwde externe bronnen**\n${mdList(externeBronnen)}`
+    : '';
+
+  return `# Kennisbank — ${client}
+
+Gebruik **alleen** de onderstaande bronnen en gegevens. Verzin geen feiten. Ontbreekt informatie die je nodig hebt? Meld dit aan de gebruiker en vraag om aanvulling.
+
+---
+
+## Productcatalogus
+
+${pairedToMd('producten')}
+
+---
+
+## Entiteiten
+
+Gebruik onderstaande namen **altijd exact zo** als hier vermeld.
+
+**Organisaties**
+${chipsToMd('org')}
+
+**Wet- en regelgeving**
+${chipsToMd('wet')}
+
+**Producten / diensten**
+${chipsToMd('product')}
+
+**Locaties**
+${chipsToMd('locatie')}
+
+**Overig**
+${chipsToMd('overig')}
+
+---
+
+## Vakbegrippen
+
+Introduceer elk vakbegrip bij eerste gebruik zoals hieronder beschreven.
+
+${begrippensSection}
+
+---
+
+## Kennisbronnen
+
+Hogere prioriteit wint bij conflicterende informatie.
+
+**1. Wetgeving (hoogste prioriteit)**
+${chipsToMd('wetgeving')}
+
+**2. Interne kennisbank**
+${chipsToMd('kennisbank')}
+
+**3. Gebruikersinput**
+Vult de kennisbank aan. Overschrijft wetgeving nooit.
+${externeBronnenSection}
+`;
+}
+
+// ── ZIP download ──────────────────────────────────────────────────────────
+async function downloadCustomAgent() {
+  const btn = document.querySelector('.btn-generate');
+  const original = btn.textContent;
+  btn.textContent = 'Bezig…';
+  btn.disabled = true;
+
+  try {
+    const zip  = new JSZip();
+    const name = (val('CLIENT_NAME') || 'content-agent').toLowerCase().replace(/\s+/g, '-');
+
+    zip.file('SETUP.md',         generateSetupMd());
+    zip.file('system-prompt.md', generateSystemPromptMd());
+    zip.file('brand.md',         generateBrandMd());
+    zip.file('seo.md',           generateSeoMd());
+    zip.file('templates.md',     generateTemplatesMd());
+    zip.file('knowledge.md',     generateKnowledgeMd());
+
+    // Include custom template if uploaded
+    if (customTemplateFile) {
+      if (customTemplateFile.isPdf) {
+        const b64 = customTemplateFile.data.split(',')[1];
+        zip.file('custom-template.pdf', b64, { base64: true });
+      } else {
+        zip.file('custom-template.md', customTemplateFile.data);
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${name}-custom-agent.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
+// ── LangChain modal ───────────────────────────────────────────────────────
+let lcCmsChoice = 'webflow';
+let lcMigrationEnabled = false;
+let lcRedirectFormat = 'vercel';
+
+function toggleMigrationSection() {
+  lcMigrationEnabled = document.getElementById('lc-migration-toggle').checked;
+  document.getElementById('lc-migration-section').style.display = lcMigrationEnabled ? '' : 'none';
+}
+function selectRedirectFormat(format) {
+  lcRedirectFormat = format;
+  document.querySelectorAll('.lc-redirect-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === format));
+}
+
+function openLangChainModal() {
+  selectLcCms('webflow');
+  lcMigrationEnabled = false;
+  lcRedirectFormat = 'vercel';
+  const tog = document.getElementById('lc-migration-toggle');
+  if (tog) tog.checked = false;
+  const sec = document.getElementById('lc-migration-section');
+  if (sec) sec.style.display = 'none';
+  selectRedirectFormat('vercel');
+  document.getElementById('lc-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLangChainModal() {
+  document.getElementById('lc-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleLcOverlayClick(e) {
+  if (e.target === document.getElementById('lc-modal-overlay')) closeLangChainModal();
+}
+function selectLcCms(platform) {
+  lcCmsChoice = platform;
+  document.querySelectorAll('.lc-cms-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === platform));
+  const row = document.getElementById('lc-endpoint-row');
+  if (row) row.style.display = platform === 'andere' ? 'none' : '';
+}
+
+async function confirmLangChainDownload() {
+  const cmsConfig = {
+    platform: lcCmsChoice,
+    endpoint: document.getElementById('lc-cms-endpoint')?.value.trim() || '',
+    keyName: document.getElementById('lc-cms-keyname')?.value.trim() || 'CMS_API_KEY',
+  };
+  const migrationConfig = {
+    enabled: lcMigrationEnabled,
+    redirectFormat: lcRedirectFormat || 'vercel',
+  };
+  closeLangChainModal();
+  const btn = document.querySelector('.btn-lc');
+  const orig = btn.textContent;
+  btn.textContent = 'Genereren…';
+  btn.disabled = true;
+  try { await generateAndDownloadLangChain(cmsConfig, migrationConfig); }
+  finally { btn.textContent = orig; btn.disabled = false; }
+}
+
+// ── LangChain config collector ────────────────────────────────────────────
+function buildLcConfig() {
+  return {
+    client:       val('CLIENT_NAME')  || '[KLANT]',
+    agency:       val('AGENCY_NAME')  || 'Goldfizh',
+    taal:         btnGroupValues['TAAL']         || 'nl-NL',
+    taalLabel:    ({'nl-NL':'Nederlands','en-GB':'Engels (Brits)','en-US':'Engels (Amerikaans)','de-DE':'Duits'})[btnGroupValues['TAAL']] || 'Nederlands',
+    aanspreekvorm:btnGroupValues['AANSPREEKVORM']|| 'je/jij',
+    maxWoorden:   val('MAX_WOORDEN_PER_ZIN')     || '20',
+    maxAlinea:    val('MAX_WOORDEN_PER_ALINEA')  || '80',
+    leesniveau:   btnGroupValues['LEESNIVEAU']   || 'B2',
+    zinsstructuur:btnGroupValues['ZINSSTRUCTUUR']|| 'gevarieerd',
+    toon:         val('TOON_OMSCHRIJVING')        || '',
+    vermijdToon:  val('TOON_VERMIJDEN')           || '',
+    jargon:       btnGroupValues['JARGON_BELEID']|| 'branche-specifiek',
+    sitemap:      val('SITEMAP_BESTANDSNAAM')     || 'sitemap.xml',
+    maxLinks:     val('MAX_CLUSTER_LINKS')        || '5',
+    doelmarkt:    btnGroupValues['DOELMARKT']     || '',
+    verboden:     getChips('verboden'),
+    guardrails:   getPaired('guardrails'),
+  };
+}
+
+// ── LangChain ZIP generator ───────────────────────────────────────────────
+async function generateAndDownloadLangChain(cmsConfig, migrationConfig = {}) {
+  const zip  = new JSZip();
+  const cfg  = buildLcConfig();
+  const name = cfg.client.toLowerCase().replace(/\s+/g, '-');
+  const mig  = migrationConfig.enabled || false;
+  const fmt  = migrationConfig.redirectFormat || 'vercel';
+
+  zip.file('package.json',             lcGenPackageJson(name, mig));
+  zip.file('vercel.json',              lcGenVercelJson(mig));
+  zip.file('.env.example',             lcGenEnvExample(cmsConfig));
+  zip.file('README.md',                lcGenReadme(cfg, cmsConfig, migrationConfig));
+  zip.file('api/agent.js',             lcGenApiAgent());
+  zip.file('api/migrate.js',           lcGenApiMigrate());
+  zip.file('lib/agent.js',             lcGenLibAgent(mig));
+  zip.file('lib/prompts.js',           lcGenPrompts(cfg, mig));
+  zip.file('lib/tools/index.js',       lcGenToolsIndex(mig));
+  zip.file('lib/tools/fetch-url.js',   lcGenToolFetchUrl());
+  zip.file('lib/tools/consolidate.js', lcGenToolConsolidate());
+  zip.file('lib/tools/write-page.js',  lcGenToolWritePage());
+  zip.file('lib/tools/validate.js',    lcGenToolValidate());
+  zip.file('lib/tools/load-knowledge.js', lcGenToolLoadKnowledge());
+  zip.file('lib/tools/publish-cms.js', lcGenToolPublishCms(cmsConfig));
+  zip.file('knowledge/brand.md',       generateBrandMd());
+  zip.file('knowledge/seo.md',         generateSeoMd());
+  zip.file('knowledge/templates.md',   generateTemplatesMd());
+  zip.file('knowledge/knowledge.md',   generateKnowledgeMd());
+
+  if (mig) {
+    zip.file('api/redirects.js',               lcGenApiRedirects(fmt));
+    zip.file('api/cms-export.js',              lcGenApiCmsExport(cmsConfig));
+    zip.file('api/cms-import.js',              lcGenApiCmsImport(cmsConfig));
+    zip.file('lib/tools/parse-input.js',       lcGenToolParseInput());
+    zip.file('lib/tools/map-redirects.js',     lcGenToolMapRedirects());
+    zip.file('lib/tools/export-redirects.js',  lcGenToolExportRedirects(fmt));
+    zip.file('lib/tools/cms-read.js',          lcGenToolCmsRead(cmsConfig));
+    zip.file('lib/tools/excel-export.js',      lcGenToolExcelExport());
+    zip.file('lib/tools/excel-import.js',      lcGenToolExcelImport());
+    zip.file('lib/tools/cms-bulk-write.js',    lcGenToolCmsBulkWrite(cmsConfig));
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = name + '-langchain-agent.zip'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── File generators ──────────────────────────────────────────────────────
+
+function lcGenPackageJson(name, migration = false) {
+  const deps = {
+    '@langchain/anthropic': '^0.3.0',
+    '@langchain/core': '^0.3.0',
+    'langchain': '^0.3.0',
+    'zod': '^3.22.0',
+  };
+  if (migration) {
+    deps['xlsx'] = '^0.18.5';
+    deps['fast-xml-parser'] = '^4.4.0';
+  }
+  return JSON.stringify({
+    name: name + '-content-agent',
+    version: '1.0.0',
+    type: 'module',
+    description: 'LangChain content agent — gegenereerd door Goldfizh Content Agent Builder',
+    dependencies: deps,
+  }, null, 2);
+}
+
+function lcGenVercelJson(migration = false) {
+  const functions = {
+    'api/agent.js':   { maxDuration: 300 },
+    'api/migrate.js': { maxDuration: 300 },
+  };
+  if (migration) {
+    functions['api/redirects.js']  = { maxDuration: 300 };
+    functions['api/cms-export.js'] = { maxDuration: 60 };
+    functions['api/cms-import.js'] = { maxDuration: 300 };
+  }
+  return JSON.stringify({ functions }, null, 2);
+}
+
+function lcGenEnvExample(cms) {
+  const lines = [
+    '# Anthropic API key (verplicht)',
+    'ANTHROPIC_API_KEY=sk-ant-...',
+    '',
+    '# Beveilig de agent-endpoints met een Bearer token (aanbevolen voor productie)',
+    '# Laat leeg om de endpoints open te laten (alleen lokaal/testen)',
+    'AGENT_API_KEY=',
+    '',
+    '# CMS API-key',
+    cms.keyName + '=...',
+  ];
+  if (cms.endpoint) lines.push('CMS_ENDPOINT=' + cms.endpoint);
+  if (cms.platform === 'webflow') {
+    lines.push('WEBFLOW_COLLECTION_ID=       # ID van de pagina-collectie (te vinden in Webflow dashboard > CMS)');
+  }
+  if (cms.platform === 'contentful') {
+    lines.push('CONTENTFUL_SPACE_ID=         # Instellingen > API > Space ID');
+    lines.push('CONTENTFUL_ENVIRONMENT_ID=master');
+    lines.push('CONTENTFUL_CONTENT_TYPE_ID=  # ID van het content type voor pagina\'s');
+  }
+  return lines.join('\n');
+}
+
+function lcGenReadme(cfg, cms, migConfig = {}) {
+  const cmsLabel = { webflow:'Webflow', contentful:'Contentful', prepr:'Prepr', headless:'Headless/REST', andere:'(nog te bepalen)' }[cms.platform] || cms.platform;
+  const mig = migConfig.enabled || false;
+  const fmt = migConfig.redirectFormat || 'vercel';
+  const fmtLabel = { vercel:'vercel.json', netlify:'_redirects', htaccess:'.htaccess', nginx:'nginx-redirects.conf' }[fmt] || fmt;
+  const lines = [
+    '# ' + cfg.client + ' — LangChain Content Agent',
+    '',
+    'Gegenereerd door Goldfizh Content Agent Builder voor **' + cfg.agency + '**.',
+    mig ? '_Inclusief migratie-module (redirects, bulk CMS, Excel import/export)._' : '',
+    '',
+    '## Vereisten',
+    '',
+    '- Node.js 18+',
+    '- Vercel CLI (`npm i -g vercel`)',
+    '- Anthropic API key',
+    '',
+    '## Installatie',
+    '',
+    '```bash',
+    'npm install',
+    'cp .env.example .env.local',
+    '# Vul ANTHROPIC_API_KEY en ' + cms.keyName + ' in .env.local',
+    '```',
+    '',
+    '## Deployen op Vercel',
+    '',
+    '```bash',
+    'vercel deploy',
+    '# Voeg environment variables toe in het Vercel dashboard',
+    '```',
+    '',
+    '## API-endpoints',
+    '',
+    '### `POST /api/agent` — Schrijf één pagina',
+    '```json',
+    '{ "url": "https://www.voorbeeld.nl/diensten/...", "pageType": "dienstpagina", "keywords": "...", "brief": "..." }',
+    '```',
+    '',
+    '### `POST /api/migrate` — Batch migratie (continuation token)',
+    '```json',
+    '{ "urls": ["https://oud.nl/pagina-1"], "completed": [], "batchSize": 3 }',
+    '```',
+    'Herhaal tot `done: true` in de response.',
+  ];
+
+  if (mig) {
+    lines.push(
+      '',
+      '### `POST /api/redirects` — Redirect-mapping genereren',
+      '```json',
+      '{ "oldUrls": ["/oud/pad"], "newUrls": ["/nieuw/pad"], "permanent": true }',
+      '```',
+      'Geeft de inhoud van `' + fmtLabel + '` terug als string (`content`) plus de gematchte redirect-paren.',
+      '',
+      '### `POST /api/cms-export` — CMS exporteren naar Excel',
+      '```json',
+      '{ "collectionId": "optional", "format": "excel" }',
+      '```',
+      'Geeft `{ base64, filename, rows, columns }` terug. Decodeer base64 om de Excel te downloaden.',
+      '',
+      '### `POST /api/cms-import` — Excel/CSV importeren in CMS (met continuation token)',
+      '```json',
+      '{ "data": "<base64-excel>", "mimeType": "excel", "operation": "create", "completed": [], "batchSize": 10 }',
+      '```',
+      'Herhaal tot `done: true`. Ondersteunt `create`, `update` (vereist kolom `_id`) en `upsert`.',
+      '',
+      '> **Excel-tip voor bulk upload:** zorg dat de kolomnamen exact overeenkomen met de veldsluggen in ' + cmsLabel + '. Exporteer eerst via `/api/cms-export` voor de juiste headers.',
+    );
+  }
+
+  lines.push(
+    '',
+    '## Content-tools (6)',
+    '',
+    '| Tool | Wanneer |',
+    '|------|---------|',
+    '| `fetch_url_content` | Inhoud van een bestaande URL ophalen |',
+    '| `consolidate_sources` | Meerdere bronpagina\'s samenvoegen |',
+    '| `write_page` | Nieuwe pagina schrijven |',
+    '| `validate_output` | SEO + brand check |',
+    '| `load_knowledge` | Merk- of productinfo opzoeken |',
+    '| `publish_to_cms` | Publiceren naar ' + cmsLabel + ' |',
+  );
+
+  if (mig) {
+    lines.push(
+      '',
+      '## Migratie-tools (7)',
+      '',
+      '| Tool | Wanneer |',
+      '|------|---------|',
+      '| `parse_input` | Sitemap XML / CSV / Excel → URL-lijst |',
+      '| `map_redirects` | Oud URL → nieuw URL matchen (AI) |',
+      '| `export_redirects` | Redirect-map → ' + fmtLabel + ' |',
+      '| `cms_read` | Alle items uit CMS ophalen |',
+      '| `excel_export` | Data → downloadbare Excel |',
+      '| `excel_import` | Geüploade Excel/CSV → rijen |',
+      '| `cms_bulk_write` | Rijen → CMS aanmaken/bijwerken |',
+    );
+  }
+
+  lines.push(
+    '',
+    '## CMS',
+    '',
+    'Platform: **' + cmsLabel + '**',
+    cms.endpoint ? 'Endpoint: `' + cms.endpoint + '`' : 'Endpoint: _zie `lib/tools/publish-cms.js`_',
+    'API-key: `process.env.' + cms.keyName + '`',
+  );
+
+  return lines.filter(l => l !== null).join('\n');
+}
+
+function lcGenApiAgent() {
+  return [
+    "import { createContentAgent } from '../lib/agent.js';",
+    '',
+    'export const config = { maxDuration: 300 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true; // geen key ingesteld = open (alleen lokaal gebruiken)',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    '',
+    '  const { url, pageType = "dienstpagina", keywords = "", brief = "", sources = [] } = req.body || {};',
+    '',
+    '  try {',
+    '    const agent = createContentAgent();',
+    '    const input = sources.length',
+    '      ? "Consolideer de volgende " + sources.length + " bronpagina\'s en schrijf één sterke pagina.\\n" +',
+    '        "URL: " + url + "\\nPaginatype: " + pageType + "\\nZoekwoorden: " + keywords + "\\n" +',
+    '        "Bronnen om op te halen: " + sources.join(", ")',
+    '      : "Schrijf een " + pageType + ".\\nURL: " + url + "\\nZoekwoorden: " + keywords + "\\nOpdracht: " + brief;',
+    '',
+    '    const result = await agent.invoke({ input });',
+    '    return res.status(200).json({ success: true, content: result.output });',
+    '  } catch (err) {',
+    '    return res.status(500).json({ success: false, error: err.message });',
+    '  }',
+    '}',
+  ].join('\n');
+}
+
+function lcGenApiMigrate() {
+  return [
+    "import { createContentAgent } from '../lib/agent.js';",
+    '',
+    'export const config = { maxDuration: 300 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true;',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    '',
+    '  const { urls = [], completed = [], batchSize = 3, pageType = "dienstpagina", keywords = "" } = req.body || {};',
+    '',
+    '  const remaining = urls.filter(u => !completed.includes(u));',
+    '  const batch = remaining.slice(0, batchSize);',
+    '',
+    '  if (!batch.length) {',
+    '    return res.status(200).json({ done: true, completed, remaining: [], results: [], progress: { total: urls.length, done: urls.length } });',
+    '  }',
+    '',
+    '  const agent = createContentAgent();',
+    '  const results = [];',
+    '',
+    '  for (const url of batch) {',
+    '    try {',
+    '      const input = "Haal de pagina op, herschrijf deze volledig op basis van de merkregels en templates, en publiceer als concept.\\nURL: " + url + "\\nPaginatype: " + pageType + "\\nZoekwoorden: " + keywords;',
+    '      const result = await agent.invoke({ input });',
+    '      results.push({ url, success: true, content: result.output });',
+    '    } catch (err) {',
+    '      results.push({ url, success: false, error: err.message });',
+    '    }',
+    '  }',
+    '',
+    '  const newCompleted = [...completed, ...batch];',
+    '  const done = newCompleted.length >= urls.length;',
+    '',
+    '  return res.status(200).json({',
+    '    done,',
+    '    completed: newCompleted,',
+    '    remaining: remaining.slice(batchSize),',
+    '    results,',
+    '    progress: { total: urls.length, done: newCompleted.length },',
+    '  });',
+    '}',
+  ].join('\n');
+}
+
+function lcGenLibAgent(migration = false) {
+  const lines = [
+    "import { createToolCallingAgent, AgentExecutor } from 'langchain/agents';",
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    "import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';",
+    "import { fetchUrlTool }      from './tools/fetch-url.js';",
+    "import { consolidateTool }   from './tools/consolidate.js';",
+    "import { writePageTool }     from './tools/write-page.js';",
+    "import { validateTool }      from './tools/validate.js';",
+    "import { loadKnowledgeTool } from './tools/load-knowledge.js';",
+    "import { publishCmsTool }    from './tools/publish-cms.js';",
+  ];
+  if (migration) {
+    lines.push(
+      "import { parseInputTool }       from './tools/parse-input.js';",
+      "import { mapRedirectsTool }     from './tools/map-redirects.js';",
+      "import { exportRedirectsTool }  from './tools/export-redirects.js';",
+      "import { cmsReadTool }          from './tools/cms-read.js';",
+      "import { excelExportTool }      from './tools/excel-export.js';",
+      "import { excelImportTool }      from './tools/excel-import.js';",
+      "import { cmsBulkWriteTool }     from './tools/cms-bulk-write.js';",
+    );
+  }
+  lines.push(
+    "import { SYSTEM_PROMPT } from './prompts.js';",
+    '',
+    '// Claude heeft native tool-calling — gebruik createToolCallingAgent (niet ReAct)',
+    'const model = new ChatAnthropic({',
+    "  model: 'claude-sonnet-4-6',",
+    '  maxTokens: 4096,',
+    '});',
+    '',
+  );
+  if (migration) {
+    lines.push('const tools = [fetchUrlTool, consolidateTool, writePageTool, validateTool, loadKnowledgeTool, publishCmsTool, parseInputTool, mapRedirectsTool, exportRedirectsTool, cmsReadTool, excelExportTool, excelImportTool, cmsBulkWriteTool];');
+  } else {
+    lines.push('const tools = [fetchUrlTool, consolidateTool, writePageTool, validateTool, loadKnowledgeTool, publishCmsTool];');
+  }
+  lines.push(
+    '',
+    '// Prompt-template: system-instructies + menselijke input + scratchpad voor tool-calls',
+    'const prompt = ChatPromptTemplate.fromMessages([',
+    "  ['system', SYSTEM_PROMPT],",
+    "  ['human', '{input}'],",
+    "  new MessagesPlaceholder('agent_scratchpad'),",
+    ']);',
+    '',
+    'export function createContentAgent() {',
+    '  const agent = createToolCallingAgent({ llm: model, tools, prompt });',
+    '  return new AgentExecutor({ agent, tools, maxIterations: 10, verbose: false });',
+    '}',
+  );
+  return lines.join('\n');
+}
+
+function lcGenPrompts(cfg, migration = false) {
+  const guardrailLines = cfg.guardrails.length
+    ? cfg.guardrails.map(g => '- ' + g.naam + (g.desc ? ' — ' + g.desc : '')).join('\n')
+    : '- Verzin nooit feiten die niet in de kennisbank staan';
+  const verboden = cfg.verboden.length ? cfg.verboden.join(', ') : '(geen)';
+
+  const parts = [
+    'Je bent de content agent van ' + cfg.client + ', geconfigureerd door ' + cfg.agency + '.',
+    'Je schrijft altijd in ' + cfg.taalLabel + ' (' + cfg.taal + ').',
+    '',
+    'SCHRIJFREGELS:',
+    '- Aanspreekvorm: ' + cfg.aanspreekvorm + ' (nooit wisselen)',
+    '- Toon: ' + (cfg.toon || 'professioneel en direct'),
+    '- Vermijd: ' + (cfg.vermijdToon || 'vage of wollige formuleringen'),
+    '- Vakjargon: ' + cfg.jargon,
+    '- Max. ' + cfg.maxWoorden + ' woorden per zin, max. ' + cfg.maxAlinea + ' woorden per alinea',
+    '- Leesniveau: ' + cfg.leesniveau,
+    '- Zinsstructuur: ' + cfg.zinsstructuur,
+    '- Verboden woorden: ' + verboden,
+    '',
+    'CONTENT-WERKWIJZE:',
+    '1. Laad altijd eerst de relevante kennisbestanden via load_knowledge',
+    '2. Haal bronpagina\'s op via fetch_url_content als URL\'s zijn meegegeven',
+    '3. Consolideer meerdere bronnen via consolidate_sources',
+    '4. Schrijf de pagina via write_page',
+    '5. Valideer altijd via validate_output voordat je publiceert',
+    '6. Publiceer als concept via publish_to_cms',
+  ];
+
+  if (migration) {
+    parts.push(
+      '',
+      'MIGRATIE-WERKWIJZE:',
+      'Voor redirect-mapping:',
+      '1. Ontvang URL-lijsten (al geparseerd) of gebruik parse_input op sitemap/CSV/Excel-tekst',
+      '2. Map semantisch via map_redirects (werkt in batches van 50)',
+      '3. Exporteer als configuratiebestand via export_redirects',
+      '',
+      'Voor bulk CMS-beheer:',
+      '4. Exporteer bestaande CMS-content via cms_read gevolgd door excel_export',
+      '5. Importeer een aangepaste Excel/CSV via excel_import gevolgd door cms_bulk_write',
+      '6. Bij bulk-upload: verwerk max. 50 rijen per aanroep en meld voortgang',
+    );
+  }
+
+  parts.push(
+    '',
+    'GEDRAGSREGELS (guardrails):',
+    guardrailLines,
+  );
+
+  return 'export const SYSTEM_PROMPT = ' + JSON.stringify(parts.join('\n')) + ';\n';
+}
+
+function lcGenToolsIndex(migration = false) {
+  const lines = [
+    "export { fetchUrlTool }      from './fetch-url.js';",
+    "export { consolidateTool }   from './consolidate.js';",
+    "export { writePageTool }     from './write-page.js';",
+    "export { validateTool }      from './validate.js';",
+    "export { loadKnowledgeTool } from './load-knowledge.js';",
+    "export { publishCmsTool }    from './publish-cms.js';",
+  ];
+  if (migration) {
+    lines.push(
+      "export { parseInputTool }      from './parse-input.js';",
+      "export { mapRedirectsTool }    from './map-redirects.js';",
+      "export { exportRedirectsTool } from './export-redirects.js';",
+      "export { cmsReadTool }         from './cms-read.js';",
+      "export { excelExportTool }     from './excel-export.js';",
+      "export { excelImportTool }     from './excel-import.js';",
+      "export { cmsBulkWriteTool }    from './cms-bulk-write.js';",
+    );
+  }
+  return lines.join('\n');
+}
+
+function lcGenToolFetchUrl() {
+  return [
+    '/**',
+    ' * TOOL: fetch_url_content',
+    ' * Databron: het open web via fetch()',
+    ' * Gebruik wanneer: je de tekstinhoud van een bestaande webpagina nodig hebt als bronmateriaal',
+    ' * Gebruik NIET voor: lokale bestanden, API-endpoints, al opgehaalde URL\'s',
+    ' * Input: { url: string }',
+    ' * Succes: { success: true, url, title, content }',
+    ' * Fout:   { success: false, error, hint }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    '',
+    'export const fetchUrlTool = tool(',
+    '  async ({ url }) => {',
+    '    try {',
+    "      const res = await fetch(url, { headers: { 'User-Agent': 'ContentAgent/1.0' } });",
+    "      if (!res.ok) throw new Error('HTTP ' + res.status);",
+    '      const html = await res.text();',
+    '      const text = html',
+    "        .replace(/<script[\\s\\S]*?<\\/script>/gi, '')",
+    "        .replace(/<style[\\s\\S]*?<\\/style>/gi, '')",
+    "        .replace(/<[^>]+>/g, ' ')",
+    "        .replace(/\\s+/g, ' ')",
+    '        .trim()',
+    '        .slice(0, 8000);',
+    '      const titleMatch = html.match(/<title[^>]*>([^<]+)<\\/title>/i);',
+    '      const title = titleMatch ? titleMatch[1].trim() : url;',
+    '      return JSON.stringify({ success: true, url, title, content: text });',
+    '    } catch (err) {',
+    '      return JSON.stringify({',
+    '        success: false, error: err.message,',
+    "        hint: 'Controleer of de URL publiek bereikbaar is en geen login vereist.'",
+    '      });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'fetch_url_content',",
+    "    description: 'Haal de tekstinhoud op van een webpagina als bronmateriaal. Gebruik NIET voor API-endpoints of al opgehaalde URLs.',",
+    '    schema: z.object({',
+    "      url: z.string().describe('Volledige URL inclusief https://')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolConsolidate() {
+  return [
+    '/**',
+    ' * TOOL: consolidate_sources',
+    ' * Databron: eerder opgehaalde paginateksten',
+    ' * Gebruik wanneer: je 2+ bronpagina\'s hebt over hetzelfde onderwerp',
+    ' * Gebruik NIET voor: één bronpagina (gebruik dan direct write_page)',
+    ' * Input: { sources: Array<{url,title,content}>, topic: string }',
+    ' * Succes: { success: true, brief }',
+    ' * Fout:   { success: false, error }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    '',
+    'const model = new ChatAnthropic({ model: \'claude-sonnet-4-6\', maxTokens: 2048 });',
+    '',
+    'export const consolidateTool = tool(',
+    '  async ({ sources, topic }) => {',
+    '    try {',
+    '      const sourcesText = sources.map((s, i) =>',
+    '        "=== Bron " + (i + 1) + ": " + s.title + " (" + s.url + ") ===\\n" + s.content',
+    "      ).join('\\n\\n');",
+    '      const response = await model.invoke([{',
+    "        role: 'user',",
+    '        content: \'Analyseer de bronpagina\\\'s over "\' + topic + \'". Geef terug: (1) alle unieke feiten en argumenten, (2) ontbrekende informatie, (3) aanbevolen structuur voor de nieuwe pagina.\\n\\nBRONNEN:\\n\' + sourcesText',
+    '      }]);',
+    '      return JSON.stringify({ success: true, brief: response.content });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'consolidate_sources',",
+    "    description: 'Voeg 2+ bronpagina\\\'s samen tot één gestructureerde brief. Gebruik NIET voor een enkele bron.',",
+    '    schema: z.object({',
+    '      sources: z.array(z.object({',
+    '        url: z.string(), title: z.string(), content: z.string()',
+    "      })).describe('Lijst van opgehaalde bronpagina\\'s'),",
+    "      topic: z.string().describe('Het centrale onderwerp van de nieuwe pagina')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolWritePage() {
+  return [
+    '/**',
+    ' * TOOL: write_page',
+    ' * Databron: knowledge/-map (brand, seo, templates, knowledge)',
+    ' * Gebruik wanneer: je een nieuwe productieklare webpagina moet schrijven',
+    ' * Gebruik NIET voor: informatie ophalen of output valideren',
+    ' * Input: { brief, pageType, url, keywords }',
+    ' * Succes: { success: true, page: { meta_title, meta_description, slug, content } }',
+    ' * Fout:   { success: false, error }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    "import { readKnowledge } from './load-knowledge.js';",
+    '',
+    "const model = new ChatAnthropic({ model: 'claude-sonnet-4-6', maxTokens: 4096 });",
+    '',
+    'export const writePageTool = tool(',
+    '  async ({ brief, pageType, url, keywords }) => {',
+    '    try {',
+    '      const { brand, seo, templates, knowledge } = await readKnowledge();',
+    '      const systemContent = brand + "\\n\\n---\\n\\n" + seo + "\\n\\n---\\n\\n" + templates + "\\n\\n---\\n\\n" + knowledge;',
+    '      const response = await model.invoke([',
+    "        { role: 'system', content: systemContent },",
+    "        { role: 'user',   content: 'Schrijf een complete webpagina.\\nURL: ' + url + '\\nPaginatype: ' + pageType + '\\nZoekwoorden: ' + keywords + '\\n\\nOpdracht:\\n' + brief + '\\n\\nLever op: meta_title, meta_description, slug en volledige paginatekst in Markdown.' }",
+    '      ]);',
+    "      return JSON.stringify({ success: true, page: { content: response.content } });",
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'write_page',",
+    "    description: 'Schrijf een complete webpagina op basis van een brief. Gebruikt brand-, SEO- en templateregels automatisch. Gebruik NIET voor het ophalen van bronmateriaal.',",
+    '    schema: z.object({',
+    "      brief:    z.string().describe('Schrijfopdracht of geconsolideerde brief'),",
+    "      pageType: z.enum(['dienstpagina','productpagina','artikelpagina','overig']),",
+    "      url:      z.string().describe('Toekomstige URL van de pagina'),",
+    "      keywords: z.string().describe('Zoekwoorden, kommagescheiden')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolValidate() {
+  return [
+    '/**',
+    ' * TOOL: validate_output',
+    ' * Databron: brand.md en seo.md',
+    ' * Gebruik wanneer: je een gegenereerde pagina wilt checken op SEO, toon en guardrails',
+    ' * Gebruik NIET voor: bronmateriaal valideren of URL\'s ophalen',
+    ' * Input: { content: string }',
+    ' * Succes: { success: true, passed, score, issues[], suggestions[] }',
+    ' * Fout:   { success: false, error }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    "import { readKnowledge } from './load-knowledge.js';",
+    '',
+    "const model = new ChatAnthropic({ model: 'claude-haiku-4-5-20251001', maxTokens: 1024 });",
+    '',
+    'export const validateTool = tool(',
+    '  async ({ content }) => {',
+    '    try {',
+    '      const { brand, seo } = await readKnowledge();',
+    '      const response = await model.invoke([',
+    "        { role: 'system', content: 'Je bent een content QA-specialist. Gebruik onderstaande merkregels.\\n\\n' + brand + '\\n\\n' + seo },",
+    "        { role: 'user',   content: 'Valideer deze pagina. Geef terug als JSON: {\"passed\":bool,\"score\":0-100,\"issues\":[],\"suggestions\":[]}\\n\\nPAGINA:\\n' + content }",
+    '      ]);',
+    '      const match = response.content.match(/{[\\s\\S]*}/);',
+    '      if (!match) throw new Error(\'Geen JSON in validatie-response\');',
+    '      return JSON.stringify({ success: true, ...JSON.parse(match[0]) });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'validate_output',",
+    "    description: 'Controleer een gegenereerde pagina op SEO, tone of voice en guardrails. Gebruik dit altijd NA write_page en VOOR publish_to_cms.',",
+    '    schema: z.object({',
+    "      content: z.string().describe('Volledige gegenereerde paginatekst')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolLoadKnowledge() {
+  return [
+    '/**',
+    ' * TOOL: load_knowledge',
+    ' * Databron: knowledge/-map (brand.md, seo.md, templates.md, knowledge.md)',
+    ' * Gebruik wanneer: je merk-, SEO-, template- of productinfo nodig hebt als context',
+    ' * Gebruik NIET voor: het schrijven van content of ophalen van externe URL\'s',
+    ' * Input: { file: "brand"|"seo"|"templates"|"knowledge"|"all" }',
+    ' * Succes: { success: true, file, content }',
+    ' * Fout:   { success: false, error, hint }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { readFileSync } from 'fs';",
+    "import { join, dirname } from 'path';",
+    "import { fileURLToPath } from 'url';",
+    '',
+    'const __dirname = dirname(fileURLToPath(import.meta.url));',
+    "const KNOWLEDGE_DIR = join(__dirname, '../../knowledge');",
+    '',
+    'export async function readKnowledge() {',
+    '  const read = name => {',
+    '    try { return readFileSync(join(KNOWLEDGE_DIR, name + \'.md\'), \'utf8\'); }',
+    "    catch { return '# ' + name + '.md\\n_Bestand niet gevonden_'; }",
+    '  };',
+    '  return { brand: read(\'brand\'), seo: read(\'seo\'), templates: read(\'templates\'), knowledge: read(\'knowledge\') };',
+    '}',
+    '',
+    'export const loadKnowledgeTool = tool(',
+    '  async ({ file }) => {',
+    '    try {',
+    '      const k = await readKnowledge();',
+    "      const content = file === 'all'",
+    '        ? Object.entries(k).map(([n, v]) => \'## \' + n + \'.md\\n\' + v).join(\'\\n\\n---\\n\\n\')',
+    '        : k[file] ?? (\'Bestand "\' + file + \'.md" niet gevonden.\');',
+    '      return JSON.stringify({ success: true, file, content });',
+    '    } catch (err) {',
+    "      return JSON.stringify({ success: false, error: err.message, hint: 'Controleer of de knowledge/-map aanwezig is.' });",
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'load_knowledge',",
+    "    description: 'Laad brand-, SEO-, template- of productkennis. Gebruik dit als context voordat je een pagina schrijft.',",
+    '    schema: z.object({',
+    "      file: z.enum(['brand','seo','templates','knowledge','all'])",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolPublishCms(cms) {
+  const stubs = {
+    webflow: [
+      '      // Webflow Data API v2',
+      '      // Vereist: Collections ID van je CMS-collectie',
+      "      const COLLECTION_ID = process.env.WEBFLOW_COLLECTION_ID || 'VULL_IN';",
+      "      const res = await fetch('https://api.webflow.com/v2/collections/' + COLLECTION_ID + '/items', {",
+      "        method: 'POST',",
+      '        headers: {',
+      "          'Authorization': 'Bearer ' + process.env." + cms.keyName + ",",
+      "          'Content-Type': 'application/json',",
+      '        },',
+      '        body: JSON.stringify({',
+      '          isArchived: false,',
+      '          isDraft: true,',
+      "          fieldData: { name: slug, slug, 'post-body': content }",
+      '        })',
+      '      });',
+      '      if (!res.ok) throw new Error(\'Webflow API fout: \' + res.status);',
+      '      const data = await res.json();',
+      '      return JSON.stringify({ success: true, itemId: data.id, isDraft: true });',
+    ],
+    contentful: [
+      '      // Contentful Management API',
+      '      // Vereist: CONTENTFUL_SPACE_ID en CONTENTFUL_ENVIRONMENT_ID',
+      "      const spaceId = process.env.CONTENTFUL_SPACE_ID || 'VULL_IN';",
+      "      const envId   = process.env.CONTENTFUL_ENVIRONMENT_ID || 'master';",
+      "      const res = await fetch('https://api.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries', {",
+      "        method: 'POST',",
+      '        headers: {',
+      "          'Authorization': 'Bearer ' + process.env." + cms.keyName + ",",
+      "          'Content-Type': 'application/vnd.contentful.management.v1+json',",
+      "          'X-Contentful-Content-Type': 'page',",
+      '        },',
+      "        body: JSON.stringify({ fields: { title: { 'nl-NL': slug }, body: { 'nl-NL': content } } })",
+      '      });',
+      '      if (!res.ok) throw new Error(\'Contentful API fout: \' + res.status);',
+      '      const data = await res.json();',
+      '      return JSON.stringify({ success: true, entryId: data.sys.id });',
+    ],
+    prepr: [
+      '      // Prepr GraphQL API',
+      "      const endpoint = process.env.CMS_ENDPOINT || 'https://graphql.prepr.io/VULL_TOKEN_IN';",
+      '      const mutation = `',
+      '        mutation CreatePublication($slug: String!, $content: String!) {',
+      '          createPublication(input: { slug: $slug, body: $content, status: DRAFT }) {',
+      '            _id',
+      '          }',
+      '        }',
+      '      `;',
+      "      const res = await fetch(endpoint, {",
+      "        method: 'POST',",
+      "        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env." + cms.keyName + " },",
+      "        body: JSON.stringify({ query: mutation, variables: { slug, content } })",
+      '      });',
+      '      const data = await res.json();',
+      '      if (data.errors) throw new Error(JSON.stringify(data.errors));',
+      '      return JSON.stringify({ success: true, id: data.data?.createPublication?._id });',
+    ],
+    headless: [
+      '      // Generieke REST API',
+      "      const endpoint = process.env.CMS_ENDPOINT" + (cms.endpoint ? " || '" + cms.endpoint + "'" : " || 'https://uw-cms.nl/api/pages'") + ";",
+      "      const res = await fetch(endpoint, {",
+      "        method: 'POST',",
+      '        headers: {',
+      "          'Authorization': 'Bearer ' + process.env." + cms.keyName + ",",
+      "          'Content-Type': 'application/json',",
+      '        },',
+      '        body: JSON.stringify({ slug, content, status: \'draft\' })',
+      '      });',
+      '      if (!res.ok) throw new Error(\'CMS API fout: \' + res.status);',
+      '      const data = await res.json();',
+      '      return JSON.stringify({ success: true, response: data });',
+    ],
+    andere: [
+      '      // TODO: Implementeer de CMS-integratie voor jouw platform',
+      '      // Beschikbare variabelen: slug (string), content (string)',
+      '      // Gebruik process.env.' + cms.keyName + ' voor authenticatie',
+      '      throw new Error(\'publish_to_cms is nog niet geconfigureerd. Zie lib/tools/publish-cms.js.\');',
+    ],
+  };
+
+  const body = (stubs[cms.platform] || stubs.andere).join('\n');
+
+  return [
+    '/**',
+    ' * TOOL: publish_to_cms',
+    ' * Databron: CMS API (' + ({ webflow:'Webflow Data API v2', contentful:'Contentful Management API', prepr:'Prepr GraphQL API', headless:'Headless/REST API', andere:'nog te configureren' }[cms.platform]) + ')',
+    ' * Gebruik wanneer: een gevalideerde pagina als concept gepubliceerd moet worden',
+    ' * Gebruik NIET voor: pagina\'s die validate_output niet hebben doorstaan',
+    ' * Input: { slug: string, content: string }',
+    ' * Succes: { success: true, ...platform-specifiek }',
+    ' * Fout:   { success: false, error }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    '',
+    'export const publishCmsTool = tool(',
+    '  async ({ slug, content }) => {',
+    '    try {',
+    body,
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'publish_to_cms',",
+    "    description: 'Publiceer een gevalideerde pagina als concept naar het CMS. Gebruik dit ALLEEN na validate_output met passed: true.',",
+    '    schema: z.object({',
+    "      slug:    z.string().describe('URL-slug van de pagina'),",
+    "      content: z.string().describe('Volledige paginatekst in Markdown')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+// ─── Migration tool generators ───────────────────────────────────────────
+
+function lcGenToolParseInput() {
+  return [
+    '/**',
+    ' * TOOL: parse_input',
+    ' * Databron: sitemap XML tekst, CSV tekst of base64-encoded Excel',
+    ' * Gebruik wanneer: je een URL-lijst nodig hebt uit een sitemap, CSV of Excel',
+    ' * Gebruik NIET voor: al verwerkte URL-lijsten of individuele URLs',
+    ' * Input: { type: "sitemap"|"csv"|"excel", data: string, urlColumn?: string }',
+    ' * Succes: { success: true, urls: string[], count: number }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { XMLParser } from 'fast-xml-parser';",
+    "import * as XLSX from 'xlsx';",
+    '',
+    'export const parseInputTool = tool(',
+    "  async ({ type, data, urlColumn = 'Address' }) => {",
+    '    try {',
+    '      let urls = [];',
+    "      if (type === 'sitemap') {",
+    '        const parser = new XMLParser({ ignoreAttributes: false });',
+    '        const result = parser.parse(data);',
+    '        const entries = result.urlset?.url || result.sitemapindex?.sitemap || [];',
+    '        const arr = Array.isArray(entries) ? entries : [entries];',
+    "        urls = arr.map(e => e.loc || '').filter(Boolean);",
+    "      } else if (type === 'csv') {",
+    "        const lines = data.trim().split('\\n');",
+    "        const headers = lines[0].split(',').map(h => h.trim().replace(/^\"|\"$/g, ''));",
+    "        const idx = Math.max(0, headers.findIndex(h => h === urlColumn || h.toLowerCase() === 'address' || h.toLowerCase() === 'url'));",
+    '        urls = lines.slice(1)',
+    "          .map(l => (l.split(',')[idx] || '').trim().replace(/^\"|\"$/g, ''))",
+    "          .filter(u => u.startsWith('http'));",
+    "      } else if (type === 'excel') {",
+    "        const wb = XLSX.read(data, { type: 'base64' });",
+    '        const ws = wb.Sheets[wb.SheetNames[0]];',
+    "        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });",
+    "        const key = Object.keys(rows[0] || {}).find(k => k === urlColumn || k.toLowerCase() === 'address' || k.toLowerCase() === 'url') || Object.keys(rows[0] || {})[0];",
+    "        urls = rows.map(r => String(r[key] || '')).filter(u => u.startsWith('http'));",
+    '      }',
+    '      return JSON.stringify({ success: true, urls, count: urls.length });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'parse_input',",
+    "    description: 'Extraheer een URL-lijst uit een sitemap XML, CSV of Excel. Gebruik dit als eerste stap bij redirect-mapping of bulk-migraties.',",
+    '    schema: z.object({',
+    "      type:      z.enum(['sitemap','csv','excel']),",
+    "      data:      z.string().describe('Sitemap XML als tekst, CSV als tekst, of Excel als base64'),",
+    "      urlColumn: z.string().optional().describe('Kolomnaam met URL. Standaard: Address (Screaming Frog)')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolMapRedirects() {
+  return [
+    '/**',
+    ' * TOOL: map_redirects',
+    ' * Databron: twee URL-lijsten (oud + nieuw)',
+    ' * Gebruik wanneer: je 301-redirects wil aanmaken van oude naar nieuwe sitestructuur',
+    ' * Gebruik NIET voor: 1-op-1 URL-vervangingen of al bekende redirect-paren',
+    ' * Input: { oldUrls: string[], newUrls: string[] }',
+    ' * Succes: { success: true, redirects: [{from,to,confidence,reason}][], unmatched: string[] }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    '',
+    "const model = new ChatAnthropic({ model: 'claude-haiku-4-5-20251001', maxTokens: 4096 });",
+    '',
+    'export const mapRedirectsTool = tool(',
+    '  async ({ oldUrls, newUrls }) => {',
+    '    try {',
+    '      const batchSize = 50;',
+    '      const allRedirects = [];',
+    '      const allUnmatched = [];',
+    '      for (let i = 0; i < oldUrls.length; i += batchSize) {',
+    '        const batch = oldUrls.slice(i, i + batchSize);',
+    "        const prompt = 'Match elke oude URL aan de meest passende nieuwe URL op basis van slug en pad.\\n' +",
+    "          'Geef terug als JSON: {\"redirects\":[{\"from\":\"/oud\",\"to\":\"/nieuw\",\"confidence\":0-100,\"reason\":\"...\"}],\"unmatched\":[]}\\n' +",
+    "          'Geen match mogelijk → zet in unmatched.\\n\\n' +",
+    "          'OUDE URLS:\\n' + batch.join('\\n') + '\\n\\nNIEUWE URLS:\\n' + newUrls.join('\\n') +",
+    "          '\\n\\nGeef ALLEEN JSON terug.';",
+    "        const response = await model.invoke([{ role: 'user', content: prompt }]);",
+    '        const match = response.content.match(/{[\\s\\S]*}/);',
+    '        if (match) {',
+    '          const parsed = JSON.parse(match[0]);',
+    '          allRedirects.push(...(parsed.redirects || []));',
+    '          allUnmatched.push(...(parsed.unmatched || []));',
+    '        }',
+    '      }',
+    '      return JSON.stringify({ success: true, redirects: allRedirects, unmatched: allUnmatched });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'map_redirects',",
+    "    description: 'Match oude URLs aan nieuwe URLs voor 301-redirects via AI. Verwerkt in batches van 50.',",
+    '    schema: z.object({',
+    "      oldUrls: z.array(z.string()).describe('Lijst van oude URLs of paden'),",
+    "      newUrls: z.array(z.string()).describe('Lijst van nieuwe URLs of paden')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolExportRedirects(format) {
+  const fmt = format || 'vercel';
+  const fmtLabel = { vercel: 'vercel.json', netlify: '_redirects', htaccess: '.htaccess', nginx: 'nginx-redirects.conf' }[fmt] || fmt;
+  return [
+    '/**',
+    ' * TOOL: export_redirects',
+    ' * Databron: redirect-map (output van map_redirects)',
+    ' * Gebruik wanneer: een redirect-map klaar is en als configuratiebestand geëxporteerd moet worden',
+    ' * Gebruik NIET voor: het aanmaken of matchen van redirects',
+    ' * Input: { redirects: [{from,to}][], permanent?: boolean }',
+    ' * Succes: { success: true, content: string, filename: string, count: number }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    '',
+    "const REDIRECT_FORMAT = '" + fmt + "';",
+    '',
+    'export const exportRedirectsTool = tool(',
+    '  async ({ redirects, permanent = true }) => {',
+    '    try {',
+    '      let content, filename;',
+    "      if (REDIRECT_FORMAT === 'vercel') {",
+    '        const json = { redirects: redirects.map(r => ({',
+    "          source: r.from.startsWith('/') ? r.from : '/' + r.from,",
+    "          destination: r.to.startsWith('/') ? r.to : '/' + r.to,",
+    '          permanent,',
+    '        })) };',
+    '        content = JSON.stringify(json, null, 2);',
+    "        filename = 'vercel-redirects.json';",
+    "      } else if (REDIRECT_FORMAT === 'netlify') {",
+    "        content = redirects.map(r => r.from + '  ' + r.to + '  ' + (permanent ? '301' : '302')).join('\\n');",
+    "        filename = '_redirects';",
+    "      } else if (REDIRECT_FORMAT === 'htaccess') {",
+    "        const lines = ['<IfModule mod_rewrite.c>', 'RewriteEngine On'];",
+    "        redirects.forEach(r => lines.push('Redirect ' + (permanent ? '301' : '302') + ' ' + r.from + ' ' + r.to));",
+    "        lines.push('</IfModule>');",
+    "        content = lines.join('\\n');",
+    "        filename = '.htaccess';",
+    "      } else if (REDIRECT_FORMAT === 'nginx') {",
+    "        content = redirects.map(r => 'location = ' + r.from + ' { return ' + (permanent ? '301' : '302') + ' ' + r.to + '; }').join('\\n');",
+    "        filename = 'nginx-redirects.conf';",
+    '      }',
+    '      return JSON.stringify({ success: true, content, filename: filename || \'' + fmtLabel + '\', count: redirects.length });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'export_redirects',",
+    "    description: 'Exporteer een redirect-map als " + fmtLabel + ". Gebruik na map_redirects.',",
+    '    schema: z.object({',
+    "      redirects: z.array(z.object({ from: z.string(), to: z.string() })).describe('Redirect-paren'),",
+    "      permanent: z.boolean().optional().describe('301 permanent (true) of 302 tijdelijk (false)')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolCmsRead(cms) {
+  const stubs = {
+    webflow: [
+      '      const collectionId = col || process.env.WEBFLOW_COLLECTION_ID || \'\';',
+      "      if (!collectionId) throw new Error('Stel WEBFLOW_COLLECTION_ID in als env var of geef collectionId mee.');",
+      '      let allItems = [], offset = 0;',
+      '      while (true) {',
+      "        const res = await fetch('https://api.webflow.com/v2/collections/' + collectionId + '/items?limit=100&offset=' + offset, {",
+      "          headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + " }",
+      '        });',
+      "        if (!res.ok) throw new Error('Webflow API fout: ' + res.status);",
+      '        const data = await res.json();',
+      '        allItems.push(...(data.items || []));',
+      '        if (!data.pagination?.next) break;',
+      '        offset += 100;',
+      '      }',
+      "      rows  = allItems.map(it => ({ _id: it.id, ...it.fieldData }));",
+      '      fields = rows.length ? Object.keys(rows[0]) : [];',
+    ],
+    contentful: [
+      "      const spaceId = process.env.CONTENTFUL_SPACE_ID || '';",
+      "      const envId   = process.env.CONTENTFUL_ENVIRONMENT_ID || 'master';",
+      '      const typeId  = col || process.env.CONTENTFUL_CONTENT_TYPE_ID || \'\';',
+      "      const params  = new URLSearchParams({ limit: 1000, ...(typeId ? { content_type: typeId } : {}) });",
+      "      const res = await fetch('https://cdn.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries?' + params, {",
+      "        headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + " }",
+      '      });',
+      "      if (!res.ok) throw new Error('Contentful API fout: ' + res.status);",
+      '      const data = await res.json();',
+      "      rows   = (data.items || []).map(it => ({ _id: it.sys.id, ...Object.fromEntries(Object.entries(it.fields).map(([k,v]) => [k, typeof v === 'object' && v !== null && !Array.isArray(v) ? JSON.stringify(v) : v])) }));",
+      '      fields = rows.length ? Object.keys(rows[0]) : [];',
+    ],
+    prepr: [
+      "      throw new Error('Prepr cms_read is nog niet geconfigureerd. Vul lib/tools/cms-read.js in na overleg met development.');",
+    ],
+    andere: [
+      "      throw new Error('cms_read is niet geconfigureerd. Zie lib/tools/cms-read.js.');",
+    ],
+  };
+  const body = (stubs[cms.platform] || stubs.andere).join('\n');
+  const cmsLabel = { webflow: 'Webflow Data API v2', contentful: 'Contentful Delivery API', prepr: 'Prepr API', andere: 'nog te configureren' }[cms.platform] || cms.platform;
+  return [
+    '/**',
+    ' * TOOL: cms_read',
+    ' * Databron: ' + cmsLabel,
+    ' * Gebruik wanneer: je alle items uit een CMS-collectie wil ophalen (voor export of analyse)',
+    ' * Gebruik NIET voor: aanmaken of bijwerken van items',
+    ' * Input: { collectionId?: string, limit?: number }',
+    ' * Succes: { success: true, rows: object[], fields: string[], count: number }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    '',
+    'export const cmsReadTool = tool(',
+    '  async ({ collectionId, limit = 1000 }) => {',
+    "    const col = collectionId || '';",
+    '    let rows = [], fields = [];',
+    '    try {',
+    body,
+    '      return JSON.stringify({ success: true, rows: rows.slice(0, limit), fields, count: rows.length });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'cms_read',",
+    "    description: 'Haal alle items op uit een CMS-collectie. Gebruik voor export of als basis voor bulk-bewerkingen.',",
+    '    schema: z.object({',
+    "      collectionId: z.string().optional().describe('CMS collectie-ID (optioneel als env var ingesteld is)'),",
+    "      limit:        z.number().optional().describe('Max. items, standaard 1000')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolExcelExport() {
+  return [
+    '/**',
+    ' * TOOL: excel_export',
+    ' * Databron: array van objecten (bijv. output van cms_read)',
+    ' * Gebruik wanneer: je data wil exporteren als downloadbare Excel',
+    ' * Gebruik NIET voor: ruwe tekst of niet-tabeldata',
+    ' * Input: { rows: object[], filename?: string }',
+    ' * Succes: { success: true, base64: string, filename: string, rows: number, columns: string[] }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import * as XLSX from 'xlsx';",
+    '',
+    'export const excelExportTool = tool(',
+    "  async ({ rows, filename = 'export.xlsx' }) => {",
+    '    try {',
+    "      if (!rows.length) throw new Error('Geen data om te exporteren');",
+    '      const wb = XLSX.utils.book_new();',
+    "      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Sheet1');",
+    "      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });",
+    '      return JSON.stringify({ success: true, base64, filename, rows: rows.length, columns: Object.keys(rows[0]) });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'excel_export',",
+    "    description: 'Converteer data naar een downloadbare Excel (base64). Gebruik na cms_read voor CMS-export.',",
+    '    schema: z.object({',
+    "      rows:     z.array(z.record(z.any())).describe('Array van objecten met consistente keys'),",
+    "      filename: z.string().optional()",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolExcelImport() {
+  return [
+    '/**',
+    ' * TOOL: excel_import',
+    ' * Databron: base64-encoded Excel of CSV-tekst',
+    ' * Gebruik wanneer: een gebruiker een Excel of CSV uploadt met content voor het CMS',
+    ' * Gebruik NIET voor: data die al als object-array beschikbaar is',
+    ' * Input: { data: string, type: "excel"|"csv", maxRows?: number }',
+    ' * Succes: { success: true, rows: object[], columns: string[], count: number }',
+    ' * Fout:   { success: false, error: string }',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    "import * as XLSX from 'xlsx';",
+    '',
+    'export const excelImportTool = tool(',
+    '  async ({ data, type, maxRows = 500 }) => {',
+    '    try {',
+    "      const wb = type === 'csv'",
+    "        ? XLSX.read(data, { type: 'string' })",
+    "        : XLSX.read(data, { type: 'base64' });",
+    '      const ws = wb.Sheets[wb.SheetNames[0]];',
+    "      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });",
+    "      if (!rows.length) throw new Error('Geen rijen gevonden in het bestand');",
+    '      return JSON.stringify({ success: true, rows: rows.slice(0, maxRows), columns: Object.keys(rows[0]), count: rows.length });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'excel_import',",
+    "    description: 'Parseer een geüploade Excel of CSV naar rijen. Gebruik als voorbereiding op cms_bulk_write.',",
+    '    schema: z.object({',
+    "      data:    z.string().describe('Excel als base64 of CSV als tekst'),",
+    "      type:    z.enum(['excel','csv']),",
+    "      maxRows: z.number().optional().describe('Max. rijen, standaard 500')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+function lcGenToolCmsBulkWrite(cms) {
+  const stubs = {
+    webflow: [
+      '      const collectionId = items[0]?._collectionId || process.env.WEBFLOW_COLLECTION_ID || \'\';',
+      "      if (!collectionId) throw new Error('Stel WEBFLOW_COLLECTION_ID in of voeg _collectionId toe aan de rijen.');",
+      '      for (const item of batch) {',
+      "        const { _id, _collectionId, ...fieldData } = item;",
+      '        const isUpdate = operation !== \'create\' && _id;',
+      '        const url = isUpdate',
+      "          ? 'https://api.webflow.com/v2/collections/' + collectionId + '/items/' + _id",
+      "          : 'https://api.webflow.com/v2/collections/' + collectionId + '/items';",
+      '        const res = await fetch(url, {',
+      "          method: isUpdate ? 'PATCH' : 'POST',",
+      '          headers: {',
+      "            'Authorization': 'Bearer ' + process.env." + cms.keyName + ",",
+      "            'Content-Type': 'application/json',",
+      '          },',
+      "          body: JSON.stringify({ isArchived: false, isDraft: true, fieldData }),",
+      '        });',
+      '        if (res.ok) {',
+      '          const data = await res.json();',
+      "          results.push({ row: item, success: true, id: data.id });",
+      "          isUpdate ? updated++ : created++;",
+      '        } else {',
+      '          const err = await res.text();',
+      "          results.push({ row: item, success: false, error: 'HTTP ' + res.status + ': ' + err.slice(0, 200) });",
+      '          failed++;',
+      '        }',
+      '        await new Promise(r => setTimeout(r, 250)); // Webflow rate limit',
+      '      }',
+    ],
+    contentful: [
+      "      const spaceId = process.env.CONTENTFUL_SPACE_ID || '';",
+      "      const envId   = process.env.CONTENTFUL_ENVIRONMENT_ID || 'master';",
+      "      const typeId  = process.env.CONTENTFUL_CONTENT_TYPE_ID || '';",
+      "      const locale  = 'nl-NL';",
+      '      for (const item of batch) {',
+      "        const { _id, ...rawFields } = item;",
+      '        const fields = Object.fromEntries(Object.entries(rawFields).map(([k, v]) => [k, { [locale]: v }]));',
+      '        const isUpdate = operation !== \'create\' && _id;',
+      '        const url = isUpdate',
+      "          ? 'https://api.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries/' + _id",
+      "          : 'https://api.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries';",
+      '        const res = await fetch(url, {',
+      "          method: isUpdate ? 'PUT' : 'POST',",
+      '          headers: {',
+      "            'Authorization': 'Bearer ' + process.env." + cms.keyName + ",",
+      "            'Content-Type': 'application/vnd.contentful.management.v1+json',",
+      "            'X-Contentful-Content-Type': typeId,",
+      '          },',
+      '          body: JSON.stringify({ fields }),',
+      '        });',
+      '        if (res.ok) {',
+      '          const data = await res.json();',
+      "          results.push({ row: item, success: true, id: data.sys.id });",
+      "          isUpdate ? updated++ : created++;",
+      '        } else {',
+      '          const err = await res.text();',
+      "          results.push({ row: item, success: false, error: 'HTTP ' + res.status + ': ' + err.slice(0, 200) });",
+      '          failed++;',
+      '        }',
+      '      }',
+    ],
+    prepr: [
+      "      throw new Error('Prepr cms_bulk_write is nog niet geconfigureerd. Zie lib/tools/cms-bulk-write.js.');",
+    ],
+    andere: [
+      "      throw new Error('cms_bulk_write is niet geconfigureerd. Zie lib/tools/cms-bulk-write.js.');",
+    ],
+  };
+  const body = (stubs[cms.platform] || stubs.andere).join('\n');
+  return [
+    '/**',
+    ' * TOOL: cms_bulk_write',
+    ' * Databron: CMS API (' + (cms.platform) + ')',
+    ' * Gebruik wanneer: je meerdere rijen (uit excel_import) naar het CMS wil schrijven',
+    ' * Gebruik NIET voor: individuele pagina-publicaties (gebruik publish_to_cms)',
+    ' * Input: { items: object[], operation: "create"|"update"|"upsert", batchSize?: number }',
+    ' * Succes: { success: true, created, updated, failed, total, results[] }',
+    ' * Fout:   { success: false, error: string }',
+    ' *',
+    ' * Tip: zorg dat Excel-kolomnamen overeenkomen met CMS-veldsluggen.',
+    ' * Voor update/upsert: voeg een kolom "_id" toe met het bestaande CMS item-ID.',
+    ' */',
+    "import { tool } from '@langchain/core/tools';",
+    "import { z } from 'zod';",
+    '',
+    'export const cmsBulkWriteTool = tool(',
+    "  async ({ items, operation = 'create', batchSize = 10 }) => {",
+    '    const batch = items.slice(0, batchSize);',
+    '    let created = 0, updated = 0, failed = 0;',
+    '    const results = [];',
+    '    try {',
+    body,
+    '      return JSON.stringify({ success: true, created, updated, failed, total: batch.length, results });',
+    '    } catch (err) {',
+    '      return JSON.stringify({ success: false, error: err.message });',
+    '    }',
+    '  },',
+    '  {',
+    "    name: 'cms_bulk_write',",
+    "    description: 'Schrijf meerdere rijen naar het CMS. Verwerkt max. batchSize items per aanroep. Gebruik na excel_import.',",
+    '    schema: z.object({',
+    "      items:     z.array(z.record(z.any())).describe('Rijen om te importeren'),",
+    "      operation: z.enum(['create','update','upsert']).optional(),",
+    "      batchSize: z.number().optional().describe('Max. items per aanroep, standaard 10')",
+    '    })',
+    '  }',
+    ');',
+  ].join('\n');
+}
+
+// ─── Migration API endpoint generators ───────────────────────────────────
+
+function lcGenApiRedirects(format) {
+  const fmt = format || 'vercel';
+  const fmtLabel = { vercel: 'vercel-redirects.json', netlify: '_redirects', htaccess: '.htaccess', nginx: 'nginx-redirects.conf' }[fmt] || fmt;
+  return [
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    '',
+    'export const config = { maxDuration: 300 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true;',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    "const model = new ChatAnthropic({ model: 'claude-haiku-4-5-20251001', maxTokens: 4096 });",
+    '',
+    'async function mapUrls(oldUrls, newUrls) {',
+    '  const batchSize = 50;',
+    '  const allRedirects = [], allUnmatched = [];',
+    '  for (let i = 0; i < oldUrls.length; i += batchSize) {',
+    '    const batch = oldUrls.slice(i, i + batchSize);',
+    "    const prompt = 'Match elke oude URL aan de meest passende nieuwe URL.\\n' +",
+    "      'Geef terug als JSON: {\"redirects\":[{\"from\":\"/oud\",\"to\":\"/nieuw\",\"confidence\":0-100}],\"unmatched\":[]}\\n\\n' +",
+    "      'OUD:\\n' + batch.join('\\n') + '\\n\\nNIEUW:\\n' + newUrls.join('\\n') + '\\n\\nAlleen JSON.';",
+    "    const resp = await model.invoke([{ role: 'user', content: prompt }]);",
+    '    const m = resp.content.match(/{[\\s\\S]*}/);',
+    '    if (m) { const p = JSON.parse(m[0]); allRedirects.push(...(p.redirects||[])); allUnmatched.push(...(p.unmatched||[])); }',
+    '  }',
+    '  return { redirects: allRedirects, unmatched: allUnmatched };',
+    '}',
+    '',
+    'function formatFile(redirects, permanent) {',
+    "  if ('" + fmt + "' === 'vercel') {",
+    '    return JSON.stringify({ redirects: redirects.map(r => ({',
+    "      source: r.from.startsWith('/') ? r.from : '/' + r.from,",
+    "      destination: r.to.startsWith('/') ? r.to : '/' + r.to,",
+    '      permanent,',
+    "    })) }, null, 2);",
+    "  } else if ('" + fmt + "' === 'netlify') {",
+    "    return redirects.map(r => r.from + '  ' + r.to + '  ' + (permanent ? '301' : '302')).join('\\n');",
+    "  } else if ('" + fmt + "' === 'htaccess') {",
+    "    return ['<IfModule mod_rewrite.c>','RewriteEngine On',...redirects.map(r => 'Redirect ' + (permanent?'301':'302') + ' ' + r.from + ' ' + r.to),'</IfModule>'].join('\\n');",
+    "  } else if ('" + fmt + "' === 'nginx') {",
+    "    return redirects.map(r => 'location = ' + r.from + ' { return ' + (permanent?'301':'302') + ' ' + r.to + '; }').join('\\n');",
+    '  }',
+    "  return '';",
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    '  const { oldUrls = [], newUrls = [], permanent = true } = req.body || {};',
+    "  if (!oldUrls.length || !newUrls.length) return res.status(400).json({ error: 'oldUrls en newUrls zijn verplicht' });",
+    '  try {',
+    '    const { redirects, unmatched } = await mapUrls(oldUrls, newUrls);',
+    '    const content = formatFile(redirects, permanent);',
+    "    return res.status(200).json({ content, filename: '" + fmtLabel + "', count: redirects.length, unmatched, redirects });",
+    '  } catch (err) {',
+    '    return res.status(500).json({ error: err.message });',
+    '  }',
+    '}',
+  ].join('\n');
+}
+
+function lcGenApiCmsExport(cms) {
+  const stubs = {
+    webflow: [
+      "    const collectionId = req.body?.collectionId || process.env.WEBFLOW_COLLECTION_ID || '';",
+      "    if (!collectionId) return res.status(400).json({ error: 'Geef collectionId mee of stel WEBFLOW_COLLECTION_ID in' });",
+      '    let allItems = [], offset = 0;',
+      '    while (true) {',
+      "      const r = await fetch('https://api.webflow.com/v2/collections/' + collectionId + '/items?limit=100&offset=' + offset, {",
+      "        headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + " }",
+      '      });',
+      "      if (!r.ok) return res.status(500).json({ error: 'Webflow fout: ' + r.status });",
+      '      const d = await r.json();',
+      '      allItems.push(...(d.items || []));',
+      '      if (!d.pagination?.next) break;',
+      '      offset += 100;',
+      '    }',
+      "    rows = allItems.map(it => ({ _id: it.id, ...it.fieldData }));",
+    ],
+    contentful: [
+      "    const spaceId = process.env.CONTENTFUL_SPACE_ID || '';",
+      "    const envId   = process.env.CONTENTFUL_ENVIRONMENT_ID || 'master';",
+      '    const typeId  = req.body?.collectionId || process.env.CONTENTFUL_CONTENT_TYPE_ID || \'\';',
+      "    const params  = new URLSearchParams({ limit: 1000, ...(typeId ? { content_type: typeId } : {}) });",
+      "    const r = await fetch('https://cdn.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries?' + params, {",
+      "      headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + " }",
+      '    });',
+      "    if (!r.ok) return res.status(500).json({ error: 'Contentful fout: ' + r.status });",
+      '    const d = await r.json();',
+      "    rows = (d.items || []).map(it => ({ _id: it.sys.id, ...Object.fromEntries(Object.entries(it.fields).map(([k,v]) => [k, typeof v === 'object' && v !== null && !Array.isArray(v) ? JSON.stringify(v) : v])) }));",
+    ],
+    prepr: [
+      "    return res.status(501).json({ error: 'Prepr export nog niet geconfigureerd. Zie api/cms-export.js.' });",
+    ],
+    andere: [
+      "    return res.status(501).json({ error: 'CMS export niet geconfigureerd. Zie api/cms-export.js.' });",
+    ],
+  };
+  const body = (stubs[cms.platform] || stubs.andere).join('\n');
+  return [
+    "import * as XLSX from 'xlsx';",
+    '',
+    'export const config = { maxDuration: 60 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true;',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    '  let rows = [];',
+    '  try {',
+    body,
+    "    if (!rows.length) return res.status(200).json({ base64: '', filename: 'export.xlsx', rows: 0, columns: [] });",
+    '    const wb = XLSX.utils.book_new();',
+    "    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Export');",
+    "    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });",
+    "    return res.status(200).json({ base64, filename: 'cms-export.xlsx', rows: rows.length, columns: Object.keys(rows[0]) });",
+    '  } catch (err) {',
+    '    return res.status(500).json({ error: err.message });',
+    '  }',
+    '}',
+  ].join('\n');
+}
+
+function lcGenApiCmsImport(cms) {
+  const stubs = {
+    webflow: [
+      "    const collectionId = body.collectionId || process.env.WEBFLOW_COLLECTION_ID || '';",
+      "    if (!collectionId) return res.status(400).json({ error: 'Geef collectionId mee of stel WEBFLOW_COLLECTION_ID in' });",
+      '    for (const item of batch) {',
+      "      const { _id, _collectionId, ...fieldData } = item;",
+      '      const isUpdate = operation !== \'create\' && _id;',
+      '      const url = isUpdate',
+      "        ? 'https://api.webflow.com/v2/collections/' + collectionId + '/items/' + _id",
+      "        : 'https://api.webflow.com/v2/collections/' + collectionId + '/items';",
+      '      const r = await fetch(url, {',
+      "        method: isUpdate ? 'PATCH' : 'POST',",
+      "        headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + ", 'Content-Type': 'application/json' },",
+      "        body: JSON.stringify({ isArchived: false, isDraft: true, fieldData }),",
+      '      });',
+      '      if (r.ok) {',
+      '        const d = await r.json();',
+      "        results.push({ success: true, id: d.id, row: item.name || item.slug || item._id || '?' });",
+      "        isUpdate ? updated++ : created++;",
+      '      } else {',
+      '        const e = await r.text();',
+      "        results.push({ success: false, error: 'HTTP ' + r.status + ': ' + e.slice(0, 150), row: item.name || item.slug || '?' });",
+      '        failed++;',
+      '      }',
+      '      await new Promise(r => setTimeout(r, 250));',
+      '    }',
+    ],
+    contentful: [
+      "    const spaceId = process.env.CONTENTFUL_SPACE_ID || '';",
+      "    const envId   = process.env.CONTENTFUL_ENVIRONMENT_ID || 'master';",
+      "    const typeId  = body.collectionId || process.env.CONTENTFUL_CONTENT_TYPE_ID || '';",
+      "    const locale  = 'nl-NL';",
+      '    for (const item of batch) {',
+      '      const { _id, ...rawFields } = item;',
+      '      const fields = Object.fromEntries(Object.entries(rawFields).map(([k, v]) => [k, { [locale]: v }]));',
+      '      const isUpdate = operation !== \'create\' && _id;',
+      '      const url = isUpdate',
+      "        ? 'https://api.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries/' + _id",
+      "        : 'https://api.contentful.com/spaces/' + spaceId + '/environments/' + envId + '/entries';",
+      '      const r = await fetch(url, {',
+      "        method: isUpdate ? 'PUT' : 'POST',",
+      "        headers: { 'Authorization': 'Bearer ' + process.env." + cms.keyName + ", 'Content-Type': 'application/vnd.contentful.management.v1+json', 'X-Contentful-Content-Type': typeId },",
+      '        body: JSON.stringify({ fields }),',
+      '      });',
+      '      if (r.ok) {',
+      '        const d = await r.json();',
+      "        results.push({ success: true, id: d.sys.id });",
+      "        isUpdate ? updated++ : created++;",
+      '      } else {',
+      '        const e = await r.text();',
+      "        results.push({ success: false, error: 'HTTP ' + r.status + ': ' + e.slice(0, 150) });",
+      '        failed++;',
+      '      }',
+      '    }',
+    ],
+    prepr: [
+      "    return res.status(501).json({ error: 'Prepr import nog niet geconfigureerd. Zie api/cms-import.js.' });",
+    ],
+    andere: [
+      "    return res.status(501).json({ error: 'CMS import niet geconfigureerd. Zie api/cms-import.js.' });",
+    ],
+  };
+  const body = (stubs[cms.platform] || stubs.andere).join('\n');
+  return [
+    "import * as XLSX from 'xlsx';",
+    '',
+    'export const config = { maxDuration: 300 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true;',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    "  const body = req.body || {};",
+    "  const { data, mimeType = 'excel', operation = 'create', completed = [], batchSize = 10 } = body;",
+    "  if (!data) return res.status(400).json({ error: 'data (base64 Excel of CSV tekst) is verplicht' });",
+    '  let allRows;',
+    '  try {',
+    "    const wb = mimeType === 'csv' ? XLSX.read(data, { type: 'string' }) : XLSX.read(data, { type: 'base64' });",
+    "    allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });",
+    '  } catch (err) {',
+    "    return res.status(400).json({ error: 'Kon bestand niet parsen: ' + err.message });",
+    '  }',
+    '  const remaining = allRows.filter((_, i) => !completed.includes(i));',
+    '  const batch = remaining.slice(0, batchSize);',
+    '  if (!batch.length) {',
+    '    return res.status(200).json({ done: true, completed, remaining: 0, results: [], progress: { total: allRows.length, done: allRows.length } });',
+    '  }',
+    '  let created = 0, updated = 0, failed = 0;',
+    '  const results = [];',
+    '  try {',
+    body,
+    '  } catch (err) {',
+    '    return res.status(500).json({ error: err.message });',
+    '  }',
+    '  const newCompleted = [...completed, ...Array.from({ length: batch.length }, (_, i) => completed.length + i)];',
+    '  const done = newCompleted.length >= allRows.length;',
+    '  return res.status(200).json({',
+    '    done,',
+    '    completed: newCompleted,',
+    '    remaining: allRows.length - newCompleted.length,',
+    '    results,',
+    '    progress: { total: allRows.length, done: newCompleted.length },',
+    '    summary: { created, updated, failed },',
+    '  });',
+    '}',
+  ].join('\n');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('input[type="text"], input[type="number"]').forEach(el => {
+  el.addEventListener('input', updatePreview);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+updateProgress();
+</script>
+</body>
+</html>
