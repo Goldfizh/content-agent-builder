@@ -2038,6 +2038,10 @@ function generateSystemPromptMd() {
     ? guardrails.map(g => `- **${g.naam}**${g.desc ? ` — ${g.desc}` : ''}`).join('\n')
     : '_Geen guardrails geconfigureerd_';
 
+  const customTemplateNote = customTemplateFile
+    ? `\n> **Eigen template aanwezig:** gebruik \`custom-template.${customTemplateFile.isPdf ? 'pdf' : 'md'}\` als **enige** actieve template voor paginastructuur. Negeer de standaardsjablonen in \`templates.md\` — die dienen alleen als fallback als het eigen template een onderdeel niet dekt.\n`
+    : '';
+
   return `# ${client} Content Agent — Instructies
 
 Geconfigureerd door ${agency}.
@@ -2055,15 +2059,17 @@ Je werkt altijd vanuit vier verplichte kwaliteitslagen: SEO, GEO, Merk en Strate
 ---
 
 ## Kennisdocumenten
-
+${customTemplateNote}
 Raadpleeg de volgende bijlagen **altijd en volledig** voordat je begint met schrijven:
 
-| Bestand | Inhoud |
-|---------|--------|
-| \`brand.md\` | Tone of voice, merkwaarden, doelgroep, communicatiepijlers |
-| \`seo.md\` | SEO- en GEO-richtlijnen |
-| \`templates.md\` | Paginastructuren en contenttemplates |
-| \`knowledge.md\` | Productcatalogus, entiteiten, kennisbronnen |
+| Bestand | Prioriteit | Inhoud |
+|---------|-----------|--------|
+| \`brand.md\` | **Leidend** | Tone of voice, merkwaarden, doelgroep, communicatiepijlers |
+| \`seo.md\` | **Leidend** | SEO- en GEO-richtlijnen |
+| \`templates.md\` | Fallback | Paginastructuren en contenttemplates |
+| \`knowledge.md\` | **Leidend** | Productcatalogus, entiteiten, kennisbronnen |
+
+**Prioriteitsregel:** de inhoud van `brand.md` heeft altijd voorrang op de algemene schrijfkwaliteitsregels in deze instructies. Als de geconfigureerde tone of voice afwijkt van de standaardregels hieronder, volg dan `brand.md`.
 
 Zijn er extra bestanden bijgevoegd? Raadpleeg die ook. Ontbreekt een genoemde bijlage? Meld dit en wacht op bevestiging voordat je verdergaat.
 
@@ -2096,6 +2102,8 @@ Stel bij elke nieuwe opdracht de volgende vragen in **één bericht**. Sla vrage
 ---
 
 ## Schrijfkwaliteit
+
+> De onderstaande regels zijn technische basisnormen. De toon, stijl en aanspreekvorm uit \`brand.md\` hebben **altijd** voorrang. Pas deze regels toe binnen de kaders die \`brand.md\` stelt — niet andersom.
 
 - Grammaticaal correct ${taalLabel}. Geen onnodige hoofdletters. Geen anglicismen.
 - Actieve zinnen: onderwerp → werkwoord → voorwerp. Nooit "er wordt" of "er is". Max. ${maxW} woorden per zin.
