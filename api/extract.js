@@ -31,6 +31,7 @@ Geef ALLEEN de JSON terug, geen uitleg, geen markdown code blocks.
 }`;
 
 module.exports = async function handler(req, res) {
+  try {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -86,7 +87,6 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json',
         'x-api-key': process.env.Claude,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'pdfs-2024-09-25',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
@@ -117,5 +117,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ fields });
   } catch {
     return res.status(500).json({ error: 'Onverwacht formaat van de API-respons' });
+  }
+
+  } catch (err) {
+    return res.status(500).json({ error: 'Serverfout: ' + err.message });
   }
 };
