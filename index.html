@@ -895,15 +895,18 @@
     <div class="field-row">
       <div class="field">
         <label>Naam klant</label>
+        <div class="hint">Hoe de agent zichzelf identificeert — staat in alle gegenereerde output en prompts</div>
         <input type="text" id="CLIENT_NAME" placeholder="bijv. Hypotheek Visie" />
       </div>
       <div class="field">
         <label>Naam bureau</label>
+        <div class="hint">Jouw naam als bureau — verschijnt in de README en bestandsnamen van het gegenereerde pakket</div>
         <input type="text" id="AGENCY_NAME" placeholder="bijv. Goldfizh" />
       </div>
     </div>
     <div class="field" style="max-width:200px">
       <label>Datum</label>
+      <div class="hint">Versiedatum voor het promptdocument</div>
       <input type="text" id="DATUM" placeholder="bijv. 2026-04-01" />
     </div>
 
@@ -1066,7 +1069,7 @@
 
     <div class="field">
       <label>Communicatiepijlers</label>
-      <div class="hint">De 3–5 thema's waar alle content op teruggrijpt — geef elke pijler een naam en één zin uitleg</div>
+      <div class="hint">De 3–5 thema's die als rode draad door alle content lopen. De agent verwerkt deze impliciet — niet als letterlijke koppen, maar als terugkerende invalshoek. Bijv. pijler "Transparantie" → de agent werkt altijd met concrete feiten en vermijdt vage beloftes. Geef elke pijler een naam én één zin die uitlegt hoe dit terugkomt in de toon of inhoud.</div>
       <div class="paired-list" id="paired-pijlers"></div>
       <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('pijlers')">+ Pijler toevoegen</button>
     </div>
@@ -1095,19 +1098,29 @@
     <div class="field-row">
       <div class="field">
         <label>Sitemap bestandsnaam</label>
-        <div class="hint">Naam van het sitemap-bestand dat je hierboven uploadt. Heb je hem nog niet? Probeer <strong>uw-domein.nl/sitemap.xml</strong> in je browser — de meeste CMS-en genereren hem automatisch. Of zoek hem op in Google Search Console onder Sitemaps.</div>
+        <div class="hint">Naam van het sitemap-bestand dat je hierboven uploadt. Heb je hem nog niet? Open <strong>uw-domein.nl/sitemap.xml</strong> in je browser → rechtsklik op de pagina → "Opslaan als" → sla op als <code>sitemap.xml</code>. Ook te downloaden via Google Search Console (Sitemaps) of rechtstreeks vanuit Webflow / WordPress.</div>
         <input type="text" id="SITEMAP_BESTANDSNAAM" placeholder="sitemap.xml" />
       </div>
       <div class="field">
-        <label>Max. clusterpage-links per pagina</label>
+        <label>Max. interne links per pagina</label>
+        <div class="hint">Hoeveel interne links mag de agent maximaal plaatsen in één pagina?</div>
         <input type="number" id="MAX_CLUSTER_LINKS" placeholder="bijv. 5" min="1" />
       </div>
     </div>
 
     <div class="field">
-      <label>Bekende pagina-URL's</label>
-      <div class="hint">Plak hier de pagina's die de agent mag gebruiken voor interne links — één URL per regel. Voeg de <strong>10–20 belangrijkste pagina's</strong> toe: denk aan dienst- en productpagina's, de homepage en eventuele landingspagina's. Blogtitels of nieuwsberichten hoef je niet op te nemen. Hoe relevanter de lijst, hoe beter de linksuggesties van de agent.</div>
-      <textarea id="SITEMAP_URLS" placeholder="https://www.voorbeeld.nl/diensten/hypotheekadvies&#10;https://www.voorbeeld.nl/over-ons&#10;https://www.voorbeeld.nl/blog" style="min-height:100px;font-size:13px;font-family:monospace"></textarea>
+      <label>Type URL's</label>
+      <div class="hint">Schrijft de agent voor een bestaande website, of voor een nieuwe/gemigreerde site? Dit bepaalt hoe de agent omgaat met de URL's hieronder.</div>
+      <div class="btn-group" style="margin-top:8px">
+        <button class="btn-option selected" id="url-type-huidig"   onclick="selectUrlType('huidig')">Huidige website</button>
+        <button class="btn-option"          id="url-type-nieuw"    onclick="selectUrlType('nieuw')">Nieuwe website of migratie</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Hoofdpagina's van de website</label>
+      <div class="hint">De navigatiestructuur van de site — één URL per regel. Denk aan: homepage, over ons, werkwijze, diensten-overzicht, contact, kennisbank. <strong>Niet</strong> de individuele product- of dienstpagina's (die vul je in bij Productcatalogus). 10–15 URL's is genoeg.</div>
+      <textarea id="SITEMAP_URLS" placeholder="https://www.voorbeeld.nl/&#10;https://www.voorbeeld.nl/over-ons&#10;https://www.voorbeeld.nl/diensten&#10;https://www.voorbeeld.nl/contact" style="min-height:100px;font-size:13px;font-family:monospace"></textarea>
     </div>
   </div>
 
@@ -1142,60 +1155,18 @@
   <!-- Productcatalogus -->
   <div class="section-card">
     <div class="section-label"><div class="section-square"></div><span>Productcatalogus</span></div>
-    <div class="hint" style="margin-bottom:20px">Geef elk product of elke dienst een naam en één zin met de kernfunctie of het belangrijkste voordeel</div>
+    <div class="hint" style="margin-bottom:20px">De individuele producten en diensten van de organisatie. Geef elk item een naam, een kernomschrijving én de bijbehorende URL. De agent gebruikt deze URL's voor directe productlinks in content — anders dan de hoofdpagina's hierboven, die de navigatiestructuur vormen.</div>
 
     <div class="paired-list" id="paired-producten"></div>
     <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('producten')">+ Product / dienst toevoegen</button>
   </div>
 
-  <!-- Entiteiten -->
+  <!-- Merktermen -->
   <div class="section-card">
-    <div class="section-label"><div class="section-square"></div><span>Entiteiten</span></div>
-    <div class="hint" style="margin-bottom:20px">Namen, begrippen en verwijzingen die de agent altijd consequent moet gebruiken</div>
-
-    <div class="field-row">
-      <div class="field">
-        <label>Organisaties</label>
-        <div class="chip-input" id="chips-org" onclick="focusChipInput(this)">
-          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'org')" />
-        </div>
-      </div>
-      <div class="field">
-        <label>Wet- en regelgeving</label>
-        <div class="chip-input" id="chips-wet" onclick="focusChipInput(this)">
-          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'wet')" />
-        </div>
-      </div>
-    </div>
-
-    <div class="field-row">
-      <div class="field">
-        <label>Producten / diensten</label>
-        <div class="chip-input" id="chips-product" onclick="focusChipInput(this)">
-          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'product')" />
-        </div>
-      </div>
-      <div class="field">
-        <label>Locaties</label>
-        <div class="chip-input" id="chips-locatie" onclick="focusChipInput(this)">
-          <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'locatie')" />
-        </div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Overig</label>
-      <div class="chip-input" id="chips-overig" onclick="focusChipInput(this)">
-        <input type="text" placeholder="Typ en druk Enter…" onkeydown="handleChipKey(event,'overig')" />
-      </div>
-    </div>
-
-    <div class="field" style="margin-top:4px;padding-top:16px;border-top:1px solid var(--off-white)">
-      <label>Vakbegrippen</label>
-      <div class="hint">Geef elk vakbegrip een term én uitleg hoe de agent het bij eerste gebruik moet introduceren</div>
-      <div class="paired-list" id="paired-begrippen"></div>
-      <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('begrippen')">+ Begrip toevoegen</button>
-    </div>
+    <div class="section-label"><div class="section-square"></div><span>Merktermen</span></div>
+    <div class="hint" style="margin-bottom:20px">Termen die de agent consequent in content verwerkt om op termijn een sterke associatie te bouwen tussen het merk en deze woorden. Denk aan zoektermen, concepten of woordcombinaties die je aan het merk wil koppelen — bijv. "online boeken", "vakantie plannen", "reviewplatform". Voeg per term een korte uitleg toe over hoe of wanneer de term het best gebruikt wordt.</div>
+    <div class="paired-list" id="paired-merktermen"></div>
+    <button class="btn-add" style="margin-top:8px" onclick="addPairedItem('merktermen')">+ Merkterm toevoegen</button>
   </div>
 
 
@@ -1500,10 +1471,6 @@ function applyFields(fields) {
     pairedData['pijlers'] = fields.pijlers;
     renderPaired('pijlers');
   }
-  if (Array.isArray(fields.producten) && fields.producten.length) {
-    pairedData['producten'] = fields.producten;
-    renderPaired('producten');
-  }
   if (Array.isArray(fields.begrippen) && fields.begrippen.length) {
     // begrippen come in as [{term, uitleg}] — map to {naam, desc}
     pairedData['begrippen'] = fields.begrippen.map(b => ({ naam: b.term || b.naam || '', desc: b.uitleg || b.desc || '' }));
@@ -1516,8 +1483,7 @@ function applyFields(fields) {
 
   // Chip lists
   const chipMap = {
-    verboden: 'verboden', org: 'org', wet: 'wet',
-    product: 'product', locatie: 'locatie', overig: 'overig',
+    verboden: 'verboden',
     zorgen: 'zorgen', uitkomsten: 'uitkomsten', strategie: 'strategie',
   };
   if (Array.isArray(fields.externe_bronnen) && fields.externe_bronnen.length) {
@@ -1532,6 +1498,16 @@ function applyFields(fields) {
       document.getElementById('chips-' + id)?.classList.add('ai-filled');
     }
   });
+  // Merktermen
+  if (Array.isArray(fields.merktermen) && fields.merktermen.length) {
+    pairedData['merktermen'] = fields.merktermen.map(m => ({ naam: m.term || m.naam || '', desc: m.uitleg || m.desc || '', url: '' }));
+    renderPaired('merktermen');
+  }
+  // Producten — nu met URL
+  if (Array.isArray(fields.producten) && fields.producten.length) {
+    pairedData['producten'] = fields.producten.map(p => ({ naam: p.naam || '', desc: p.desc || '', url: p.url || '' }));
+    renderPaired('producten');
+  }
 
   updateProgress();
 }
@@ -1617,14 +1593,9 @@ output_templates:
     secundair: {woorden: ["[SEC_1]", "[SEC_2]", "[SEC_N]"], min: [MIN_SEC]}
     long_tail: ["[LONG_TAIL_1]", "[LONG_TAIL_2]"]
     regel: "Semantisch verweven. Nooit gestapeld of buiten context."
-  entiteiten:
-    regel: "Verwerk natuurlijk. Introduceer bij eerste gebruik. Zelfde schrijfwijze. Niet passend → weglaten + melden."
-    organisaties:       ["[ORG_1]", "[ORG_N]"]
-    wet_en_regelgeving: ["[WET_1]", "[WET_N]"]
-    vakbegrippen:       ["[BEGRIP_1]", "[BEGRIP_N]"]
-    producten_diensten: ["[PRODUCT_1]", "[PRODUCT_N]"]
-    locaties:           ["[LOCATIE_1]", "[LOCATIE_N]"]
-    overig:             ["[OVERIG_1]", "[OVERIG_N]"]
+  merktermen:
+    regel: "Verwerk minstens 2–3 merktermen per pagina op een natuurlijke manier. Nooit gestapeld of geforceerd."
+    termen: ["[MERKTERM_1]", "[MERKTERM_N]"]
   zoekintenties:
     informatief:    "[INFORMATIEVE_VRAAG]"
     commercieel:    "[COMMERCIELE_VRAAG]"
@@ -1683,16 +1654,25 @@ rationale:
 // ── Paired list (naam + omschrijving) ────────────────────────────────────
 const pairedData = {};
 
+// URL-type toggle
+let urlType = 'huidig';
+function selectUrlType(type) {
+  urlType = type;
+  document.getElementById('url-type-huidig').classList.toggle('selected', type === 'huidig');
+  document.getElementById('url-type-nieuw').classList.toggle('selected', type === 'nieuw');
+}
+
 const pairedPlaceholders = {
-  pijlers:    ['Naam pijler…',    'Omschrijving (één zin)…'],
-  producten:  ['Productnaam…',    'Kernfunctie of voornaamste voordeel…'],
+  pijlers:    ['Naam pijler…',    'Hoe komt dit terug in de toon of inhoud? (één zin)…'],
+  producten:  ['Productnaam…',    'Kernfunctie of voornaamste voordeel…', 'URL (bijv. /diensten/hypotheekadvies)…'],
   begrippen:  ['Vakterm…',        'Hoe introduceren? (bijv. "bij eerste gebruik uitleggen als…")'],
   guardrails: ['Wat is verboden…','Reden of context…'],
+  merktermen: ['Merkterm of zoekzin…', 'Hoe of wanneer inzetten? (bijv. "verwerk bij elk artikel over...")'],
 };
 
-function addPairedItem(id, naam = '', desc = '') {
+function addPairedItem(id, naam = '', desc = '', url = '') {
   if (!pairedData[id]) pairedData[id] = [];
-  pairedData[id].push({ naam, desc });
+  pairedData[id].push({ naam, desc, url });
   renderPaired(id);
 }
 
@@ -1701,15 +1681,23 @@ function renderPaired(id) {
   if (!container) return;
   container.innerHTML = '';
   const ph = pairedPlaceholders[id] || ['Naam…', 'Omschrijving…'];
+  const hasUrl = ph.length >= 3;
   (pairedData[id] || []).forEach((item, i) => {
     const row = document.createElement('div');
     row.className = 'paired-row';
-    row.innerHTML = `
+    row.style.flexWrap = hasUrl ? 'wrap' : '';
+    let html = `
       <input type="text" value="${escapeHtml(item.naam)}" placeholder="${ph[0]}"
         oninput="pairedData['${id}'][${i}].naam=this.value;updateProgress()" />
       <input type="text" value="${escapeHtml(item.desc)}" placeholder="${ph[1]}"
-        oninput="pairedData['${id}'][${i}].desc=this.value;updateProgress()" />
-      <button class="btn-remove" onclick="removePaired('${id}',${i})" title="Verwijder">×</button>`;
+        oninput="pairedData['${id}'][${i}].desc=this.value;updateProgress()" />`;
+    if (hasUrl) {
+      html += `<input type="text" value="${escapeHtml(item.url || '')}" placeholder="${ph[2]}"
+        style="flex-basis:100%;margin-top:4px"
+        oninput="pairedData['${id}'][${i}].url=this.value;updateProgress()" />`;
+    }
+    html += `<button class="btn-remove" onclick="removePaired('${id}',${i})" title="Verwijder">×</button>`;
+    row.innerHTML = html;
     container.appendChild(row);
   });
   updateProgress();
@@ -1805,12 +1793,13 @@ function generateOutput() {
   out = replaceList(out, '["[VERBODEN_1]", "[VERBODEN_2]", "[VERBODEN_N]"]', getChips('verboden'));
   out = replaceList(out, '["[WETGEVING_1]", "[WETGEVING_N]"]',               getChips('wetgeving'));
   out = replaceList(out, '["[KENNISBANK_1]", "[KENNISBANK_N]"]',             getChips('kennisbank'));
-  out = replaceList(out, '["[ORG_1]", "[ORG_N]"]',                           getChips('org'));
-  out = replaceList(out, '["[WET_1]", "[WET_N]"]',                           getChips('wet'));
-  out = replaceList(out, '["[BEGRIP_1]", "[BEGRIP_N]"]',                     getChips('begrip'));
-  out = replaceList(out, '["[PRODUCT_1]", "[PRODUCT_N]"]',                   getChips('product'));
-  out = replaceList(out, '["[LOCATIE_1]", "[LOCATIE_N]"]',                   getChips('locatie'));
-  out = replaceList(out, '["[OVERIG_1]", "[OVERIG_N]"]',                     getChips('overig'));
+
+  // Merktermen
+  const merktermenItems = getPaired('merktermen');
+  if (merktermenItems.length) {
+    const merkList = merktermenItems.map(m => `"${m.naam}${m.desc ? ' — ' + m.desc : ''}"`).join(', ');
+    out = out.split('["[MERKTERM_1]", "[MERKTERM_N]"]').join('[' + merkList + ']');
+  }
 
   // Simple fields
   const simpleFields = [
@@ -2215,9 +2204,17 @@ ${chipsToMd('uitkomsten')}
 
 ---
 
-## Contentstrategie
+## Redactionele invalshoek
 
 ${chipsToMd('strategie')}
+
+---
+
+## Merktermen
+
+Verwerk minstens 2–3 van de onderstaande merktermen **per pagina**, op een natuurlijke manier. Nooit gestapeld of geforceerd.
+
+${pairedToMd('merktermen')}
 
 ---
 
@@ -2262,8 +2259,12 @@ function generateSeoMd() {
   const sitemapUrls = sitemapUrlsRaw
     ? sitemapUrlsRaw.split('\n').map(u => u.trim()).filter(Boolean)
     : [];
+  const isNieuw = urlType === 'nieuw';
+  const urlTypeNote = isNieuw
+    ? '> **Let op:** de onderstaande URL\'s zijn **toekomstige URL\'s** voor een nieuwe of gemigreerde website. Schrijf alle links alsof deze pagina\'s al bestaan.'
+    : '> De onderstaande URL\'s zijn de **huidige live URL\'s** van de website.';
   const urlListSection = sitemapUrls.length
-    ? `\n---\n\n## Bekende pagina-URL's voor interne linking\n\nGebruik onderstaande URL's als ankerpunten bij interne linking. Kies altijd de meest inhoudelijk relevante URL voor de context.\n\n${sitemapUrls.map(u => `- ${u}`).join('\n')}\n`
+    ? `\n---\n\n## Hoofdpagina's voor interne linking\n\n${urlTypeNote}\n\nGebruik onderstaande URL's als ankerpunten bij interne linking. Kies altijd de meest inhoudelijk relevante URL voor de context.\n\n${sitemapUrls.map(u => `- ${u}`).join('\n')}\n`
     : '';
   return `# SEO & GEO Richtlijnen
 
@@ -2504,6 +2505,14 @@ function generateKnowledgeMd() {
     ? `\n**4. Vertrouwde externe bronnen**\n${mdList(externeBronnen)}`
     : '';
 
+  // Producten met URL
+  const producten = getPaired('producten');
+  const productenSection = producten.length
+    ? producten.map(p => `**${p.naam}**${p.url ? ` — [${p.url}](${p.url})` : ''}\n${p.desc || '_geen omschrijving_'}`).join('\n\n')
+    : '_Niet opgegeven_';
+
+  const urlTypeLabel = urlType === 'nieuw' ? 'toekomstige URL's (nieuwe website / migratie)' : 'huidige live URL's';
+
   return `# Kennisbank — ${client}
 
 Gebruik **alleen** de onderstaande bronnen en gegevens. Verzin geen feiten. Ontbreekt informatie die je nodig hebt? Meld dit aan de gebruiker en vraag om aanvulling.
@@ -2512,36 +2521,9 @@ Gebruik **alleen** de onderstaande bronnen en gegevens. Verzin geen feiten. Ontb
 
 ## Productcatalogus
 
-${pairedToMd('producten')}
+De onderstaande URL's zijn ${urlTypeLabel}.
 
----
-
-## Entiteiten
-
-Gebruik onderstaande namen **altijd exact zo** als hier vermeld.
-
-**Organisaties**
-${chipsToMd('org')}
-
-**Wet- en regelgeving**
-${chipsToMd('wet')}
-
-**Producten / diensten**
-${chipsToMd('product')}
-
-**Locaties**
-${chipsToMd('locatie')}
-
-**Overig**
-${chipsToMd('overig')}
-
----
-
-## Vakbegrippen
-
-Introduceer elk vakbegrip bij eerste gebruik zoals hieronder beschreven.
-
-${begrippensSection}
+${productenSection}
 
 ---
 

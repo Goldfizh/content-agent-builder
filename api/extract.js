@@ -15,12 +15,6 @@ Geef ALLEEN de JSON terug, geen uitleg, geen markdown code blocks.
   "JARGON_BELEID": "minimaal of branche-specifiek of ruim — kies exact één",
   "MERKWAARDEN_LIJST": "kommagescheiden merkwaarden",
   "verboden": ["woord1", "woord2"],
-  "org": ["organisatienaam 1"],
-  "wet": ["wettelijke term 1"],
-  "product": ["product of dienst 1"],
-  "locatie": ["locatie 1"],
-  "overig": [],
-  "begrippen": [{"term": "vakterm", "uitleg": "hoe de agent dit begrip bij eerste gebruik moet introduceren"}],
   "externe_bronnen": ["externe bron of website die geciteerd mag worden"],
   "guardrails": [{"gedrag": "wat de agent absoluut niet mag doen of zeggen", "reden": "waarom dit verboden is"}],
   "DOELGROEP_ROL": "functietitel of rol van de doelgroep",
@@ -30,9 +24,10 @@ Geef ALLEEN de JSON terug, geen uitleg, geen markdown code blocks.
   "DOELGROEP_WANTROUWEN": "wat de doelgroep niet zomaar gelooft zonder bewijs",
   "zorgen": ["primaire zorg 1", "primaire zorg 2"],
   "uitkomsten": ["kernuitkomst 1", "kernuitkomst 2", "kernuitkomst 3"],
-  "strategie": ["contentstrategie principe 1", "contentstrategie principe 2"],
-  "pijlers": [{"naam": "pijlernaam", "desc": "één zin omschrijving"}],
-  "producten": [{"naam": "productnaam", "desc": "kernfunctie of voornaamste voordeel"}]
+  "strategie": ["redactioneel principe 1", "redactioneel principe 2"],
+  "pijlers": [{"naam": "pijlernaam", "desc": "hoe dit terugkomt in toon of inhoud (één zin)"}],
+  "producten": [{"naam": "productnaam", "desc": "kernfunctie of voornaamste voordeel", "url": "relatieve of absolute URL indien bekend"}],
+  "merktermen": [{"term": "merkterm of zoekzin", "uitleg": "hoe of wanneer inzetten"}]
 }`;
 
 module.exports = async function handler(req, res) {
