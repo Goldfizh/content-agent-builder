@@ -1310,6 +1310,12 @@
 </div>
 
 <script>
+window.onerror = function(msg, src, line, col) {
+  var el = document.getElementById('js-error-banner');
+  if (!el) { el = document.createElement('div'); el.id = 'js-error-banner'; el.style = 'position:fixed;top:0;left:0;right:0;background:#FF453A;color:white;padding:12px 16px;font-family:monospace;font-size:13px;z-index:9999'; document.body.prepend(el); }
+  el.textContent = 'JS FOUT regel ' + line + ': ' + msg;
+  return false;
+};
 // ── File upload ────────────────────────────────────────────────────────────
 let uploadedFiles = []; // { name, size, mediaType, data }
 let customTemplateFile = null; // { name, size, data, isPdf }
