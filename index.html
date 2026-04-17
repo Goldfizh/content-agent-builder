@@ -1173,6 +1173,36 @@
   </div>
 
 
+  <!-- Intakevragen per paginatype -->
+  <div class="section-card">
+    <div class="section-label"><div class="section-square"></div><span>Intakevragen per paginatype</span></div>
+    <div class="hint" style="margin-bottom:20px">De agent stelt deze vragen vóór het schrijven van elke pagina — aanvullend op de standaard intake. De standaardvragen zijn al ingevuld; pas ze aan voor specifieke klanten of voeg eigen vragen toe. Eén vraag per regel.</div>
+
+    <div class="btn-group" style="margin-bottom:16px" id="intake-tabs">
+      <button class="btn-option selected" onclick="switchIntakeTab('dienstpagina')">Dienstpagina</button>
+      <button class="btn-option" onclick="switchIntakeTab('productpagina')">Productpagina</button>
+      <button class="btn-option" onclick="switchIntakeTab('artikelpagina')">Artikelpagina</button>
+      <button class="btn-option" onclick="switchIntakeTab('case')">Case</button>
+      <button class="btn-option" onclick="switchIntakeTab('social-proof')">Social proof</button>
+    </div>
+
+    <div id="intake-panel-dienstpagina" class="intake-panel">
+      <textarea id="intake-vragen-dienstpagina" rows="5" style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--light-grey);border-radius:8px;resize:vertical;color:var(--near-black);line-height:1.7"></textarea>
+    </div>
+    <div id="intake-panel-productpagina" class="intake-panel" style="display:none">
+      <textarea id="intake-vragen-productpagina" rows="5" style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--light-grey);border-radius:8px;resize:vertical;color:var(--near-black);line-height:1.7"></textarea>
+    </div>
+    <div id="intake-panel-artikelpagina" class="intake-panel" style="display:none">
+      <textarea id="intake-vragen-artikelpagina" rows="5" style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--light-grey);border-radius:8px;resize:vertical;color:var(--near-black);line-height:1.7"></textarea>
+    </div>
+    <div id="intake-panel-case" class="intake-panel" style="display:none">
+      <textarea id="intake-vragen-case" rows="6" style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--light-grey);border-radius:8px;resize:vertical;color:var(--near-black);line-height:1.7"></textarea>
+    </div>
+    <div id="intake-panel-social-proof" class="intake-panel" style="display:none">
+      <textarea id="intake-vragen-social-proof" rows="4" style="width:100%;font-family:inherit;font-size:13px;padding:10px 12px;border:1.5px solid var(--light-grey);border-radius:8px;resize:vertical;color:var(--near-black);line-height:1.7"></textarea>
+    </div>
+  </div>
+
   <!-- Gedragsregels -->
   <div class="section-card">
     <div class="section-label"><div class="section-square"></div><span>Gedragsregels</span></div>
@@ -1665,6 +1695,72 @@ function selectUrlType(type) {
   document.getElementById('url-type-nieuw').classList.toggle('selected', type === 'nieuw');
 }
 
+// ── Intakevragen per paginatype ───────────────────────────────────────────
+const intakeVragenDefaults = {
+  'dienstpagina': [
+    'Wat zijn de 3 belangrijkste voordelen van deze dienst?',
+    'Voor wie is de dienst specifiek bedoeld?',
+    'Wat is de prijs of prijsindicatie?',
+    'Is er een garantie, SLA of servicebelofte?',
+    'Zijn er klantcases of referenties beschikbaar?',
+  ],
+  'productpagina': [
+    'Wat zijn de specificaties van dit product?',
+    'Welke varianten of opties zijn er?',
+    'Wat is de prijs of prijsrange?',
+    'Wat onderscheidt dit product van directe alternatieven?',
+    'Is er een handleiding of technisch document beschikbaar?',
+  ],
+  'artikelpagina': [
+    'Wat is de exacte hoofdvraag die dit artikel beantwoordt?',
+    'Zijn er cijfers, onderzoeken of externe bronnen beschikbaar?',
+    'Welke product- of dienstpagina moet worden gelinkt?',
+    'Is er een gewenste invalshoek of standpunt?',
+  ],
+  'case': [
+    'Hoe mag de klant worden aangeduid? (naam, sector, of anoniem)',
+    'Wat was de situatie of het probleem vóór de samenwerking?',
+    'Wat is er concreet gedaan en in welke periode?',
+    'Wat zijn de meetbare resultaten?',
+    'Is er een quote beschikbaar? (letterlijk, inclusief naam en functie)',
+  ],
+  'social-proof': [
+    'Wat is de letterlijke quote van de klant?',
+    'Naam, functie en organisatie van de bron?',
+    'Is er een concreet resultaat of getal te vermelden bij de quote?',
+  ],
+};
+
+let activeIntakeTab = 'dienstpagina';
+
+function initIntakeVragen() {
+  Object.entries(intakeVragenDefaults).forEach(([type, vragen]) => {
+    const el = document.getElementById('intake-vragen-' + type);
+    if (el) el.value = vragen.join('\n');
+  });
+}
+
+function switchIntakeTab(type) {
+  activeIntakeTab = type;
+  document.querySelectorAll('#intake-tabs .btn-option').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.toLowerCase().replace(' ', '-') === type ||
+      (type === 'social-proof' && btn.textContent === 'Social proof') ||
+      (type === 'artikelpagina' && btn.textContent === 'Artikelpagina') ||
+      (type === 'dienstpagina' && btn.textContent === 'Dienstpagina') ||
+      (type === 'productpagina' && btn.textContent === 'Productpagina') ||
+      (type === 'case' && btn.textContent === 'Case'));
+  });
+  document.querySelectorAll('.intake-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('intake-panel-' + type);
+  if (panel) panel.style.display = 'block';
+}
+
+function getIntakeVragen(type) {
+  const el = document.getElementById('intake-vragen-' + type);
+  if (!el) return [];
+  return el.value.split('\n').map(v => v.trim()).filter(Boolean);
+}
+
 const pairedPlaceholders = {
   pijlers:    ['Naam pijler…',    'Hoe komt dit terug in de toon of inhoud? (één zin)…'],
   producten:  ['Productnaam…',    'Kernfunctie of voornaamste voordeel…', 'URL (bijv. /diensten/hypotheekadvies)…'],
@@ -2095,6 +2191,8 @@ Stel bij elke nieuwe opdracht de volgende vragen in **één bericht**. Sla vrage
 4. Wat is het doel van de pagina? (informeren / converteren / positioneren / navigeren)
 5. Wat is het paginatype? (dienstpagina / productpagina / artikelpagina / case / social proof snippet / anders)
 
+**Aanvullende intakevragen per type:** elk paginatype in \`templates.md\` heeft een eigen set aanvullende intakevragen. Raadpleeg \`templates.md\` na ontvangst van het paginatype en stel de bijbehorende vragen in hetzelfde intakebericht — tenzij de gebruiker ze al heeft beantwoord.
+
 **Paginatype "case" of "social proof":** activeer het afwijkende schrijfregime uit \`templates.md\`. SEO-regels zijn niet leidend. Gebruik de case-zelfcheck in plaats van de standaard zelfcheck.
 
 **Doelgroep:** de doelgroep is vooraf geconfigureerd in \`brand.md\`. Gebruik die als standaard. Vraag alleen opnieuw als de gebruiker aangeeft dat deze pagina een afwijkende doelgroep heeft.
@@ -2382,6 +2480,13 @@ ${urlListSection}`;
 }
 
 // ── templates.md ──────────────────────────────────────────────────────────
+function getIntakeVragenMd(type) {
+  const vragen = getIntakeVragen(type);
+  if (!vragen.length) return '';
+  return '\n\n**Stel deze vragen vóór het schrijven (aanvullend op de standaard intake):**\n' +
+    vragen.map(v => '- ' + v).join('\n');
+}
+
 function generateTemplatesMd() {
   const client = orFallback(val('CLIENT_NAME'), '[KLANT]');
   const doelmarkt = btnGroupValues['DOELMARKT'] || '';
@@ -2434,6 +2539,7 @@ De structuur volgt een bewuste contentfunnel:
 | Wat zijn de kosten van [dienst]? | Prijsindicatie of vergelijkingstabel |
 | Waarom ${client} voor [dienst]? | Max. 3 feitelijk onderbouwde argumenten |
 | [CTA-kop] | Één duidelijke call-to-action |
+${getIntakeVragenMd('dienstpagina')}
 
 ### Productpagina
 
@@ -2444,6 +2550,7 @@ De structuur volgt een bewuste contentfunnel:
 | Wat zijn de voordelen van [product]? | Max. 4 voordelen als lijst, elk met feit of cijfer |
 | [Product] vs. [alternatief]: wat is het verschil? | Vergelijkingstabel |
 | Hoe vraag ik [product] aan of bestel ik het? | Kort proces + CTA |
+${getIntakeVragenMd('productpagina')}
 
 ### Artikelpagina
 
@@ -2454,6 +2561,7 @@ De structuur volgt een bewuste contentfunnel:
 | [Subvraag 2] | Verdieping deelonderwerp 2 |
 | [Meer subvragen] | Voeg toe naar behoefte |
 | Conclusie: [kernboodschap] | Max. 100 woorden + minimaal één link naar product- of dienstpagina |
+${getIntakeVragenMd('artikelpagina')}
 
 ---
 
@@ -2510,6 +2618,7 @@ Gebruik deze structuur voor product- en dienstpagina's die ook door AI-zoekmachi
 | 6 | Quote (verplicht) | Één authentieke uitspraak van de klant. Naam + functietitel vermelden. Niet parafraseren. |
 | 7 | Reflectie | Één alinea van max. 3 zinnen: wat zegt dit over de aanpak of de samenwerking? Geen herhaling van resultaten. |
 | 8 | Soft CTA | Uitnodigend, niet dwingend. Aanspreekvorm uit \`brand.md\`. Max. 2 zinnen. |
+${getIntakeVragenMd('case')}
 
 ### Structuur — Social proof snippet (kort formaat)
 
@@ -2521,6 +2630,7 @@ Gebruik dit voor testimonials, reviewblokken en quotes op landingspagina's.
 | Quote | Letterlijke uitspraak, max. 60 woorden |
 | Naam + functie | Voornaam + achternaam, functietitel, eventueel organisatie |
 | Resultaat (optioneel) | Één concreet getal of feit onder de quote — visueel losstaand |
+${getIntakeVragenMd('social-proof')}
 
 ### Wat je NIET doet in case- en social proof content
 
@@ -3131,6 +3241,8 @@ function lcGenPrompts(cfg, migration = false) {
     '- Verboden woorden: ' + verboden,
     '',
     'DOELGROEP: geconfigureerd in brand.md — gebruik die als standaard. Vraag niet opnieuw, tenzij de gebruiker aangeeft dat deze pagina een afwijkende doelgroep heeft.',
+    '',
+    'INTAKEVRAGEN PER PAGINATYPE: elk paginatype in templates.md heeft aanvullende intakevragen. Raadpleeg templates.md na ontvangst van het paginatype en stel de bijbehorende vragen in hetzelfde bericht — tenzij al beantwoord.',
     '',
     'CONTENT-WERKWIJZE:',
     '1. Laad altijd eerst de relevante kennisbestanden via load_knowledge',
@@ -4261,6 +4373,7 @@ document.addEventListener('keydown', e => {
 });
 
 updateProgress();
+initIntakeVragen();
 </script>
 </body>
 </html>
