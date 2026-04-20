@@ -3,6 +3,16 @@ Vul alleen in wat je met zekerheid kunt afleiden uit de documenten.
 Laat velden leeg ("" of []) als de informatie niet aanwezig is.
 Geef ALLEEN de JSON terug, geen uitleg, geen markdown code blocks.
 
+BELANGRIJK voor het veld "merktermen":
+Dit zijn GEEN slogans, merkwaarden of interne termen.
+Dit zijn zoektermen waarop potentiële klanten zoeken in Google — denk aan:
+- de diensten of producten bij naam (zoals de doelgroep ze noemt, niet de organisatie)
+- veelgestelde vragen of problemen die de doelgroep heeft
+- vakjargon dat de doelgroep begrijpt of zelf gebruikt
+- synoniemen en alternatieve formuleringen voor hetzelfde probleem
+Voorbeeld voor een letselschade advocaat: "letselschade", "smartengeld", "schadevergoeding na ongeluk", "advocaat letsel", "aansprakelijkheid werkgever", "whiplash vergoeding"
+Voorbeeld voor een boekhouder: "boekhouder zzp", "btw aangifte", "jaarrekening opstellen", "administratie uitbesteden"
+
 {
   "CLIENT_NAME": "officiële naam van de organisatie",
   "AANSPREEKVORM": "je/jij of u — kies exact één van deze twee",
@@ -27,7 +37,7 @@ Geef ALLEEN de JSON terug, geen uitleg, geen markdown code blocks.
   "strategie": ["redactioneel principe 1", "redactioneel principe 2"],
   "pijlers": [{"naam": "pijlernaam", "desc": "hoe dit terugkomt in toon of inhoud (één zin)"}],
   "producten": [{"naam": "productnaam", "desc": "kernfunctie of voornaamste voordeel", "url": "relatieve of absolute URL indien bekend"}],
-  "merktermen": [{"term": "merkterm of zoekzin", "uitleg": "hoe of wanneer inzetten"}]
+  "merktermen": [{"term": "zoekterm zoals doelgroep die intypt in Google", "uitleg": "bij welke dienst of pagina inzetten"}]
 }`;
 
 module.exports = async function handler(req, res) {
