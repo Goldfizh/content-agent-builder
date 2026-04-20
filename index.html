@@ -1572,6 +1572,20 @@ function applyFields(fields) {
     renderPaired('producten');
   }
 
+  // Intakevragen per paginatype — overschrijf defaults als document eigen vragen heeft
+  if (fields.intakevragen && typeof fields.intakevragen === 'object') {
+    ['dienstpagina', 'productpagina', 'artikelpagina', 'case', 'social-proof'].forEach(type => {
+      const vragen = fields.intakevragen[type];
+      if (Array.isArray(vragen) && vragen.length) {
+        const el = document.getElementById('intake-vragen-' + type);
+        if (el) {
+          el.value = vragen.join('\n');
+          el.classList.add('ai-filled');
+        }
+      }
+    });
+  }
+
   updateProgress();
 }
 

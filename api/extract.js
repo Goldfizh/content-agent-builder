@@ -37,8 +37,20 @@ Voorbeeld voor een boekhouder: "boekhouder zzp", "btw aangifte", "jaarrekening o
   "strategie": ["redactioneel principe 1", "redactioneel principe 2"],
   "pijlers": [{"naam": "pijlernaam", "desc": "hoe dit terugkomt in toon of inhoud (één zin)"}],
   "producten": [{"naam": "productnaam", "desc": "kernfunctie of voornaamste voordeel", "url": "relatieve of absolute URL indien bekend"}],
-  "merktermen": [{"term": "zoekterm zoals doelgroep die intypt in Google", "uitleg": "bij welke dienst of pagina inzetten"}]
-}`;
+  "merktermen": [{"term": "zoekterm zoals doelgroep die intypt in Google", "uitleg": "bij welke dienst of pagina inzetten"}],
+  "intakevragen": {
+    "dienstpagina": ["aanvullende vraag specifiek voor dit type pagina bij deze klant"],
+    "productpagina": ["aanvullende vraag specifiek voor dit type pagina bij deze klant"],
+    "artikelpagina": ["aanvullende vraag specifiek voor dit type pagina bij deze klant"],
+    "case": ["aanvullende vraag specifiek voor dit type pagina bij deze klant"],
+    "social-proof": ["aanvullende vraag specifiek voor dit type pagina bij deze klant"]
+  }
+}
+
+BELANGRIJK voor "intakevragen":
+Zoek in de documenten naar checklists, instructies, vereiste informatie of vragen die gesteld moeten worden vóór het schrijven van een bepaald paginatype.
+Laat een type leeg ([]) als er geen specifieke instructies voor zijn gevonden.
+Verzin GEEN vragen — extraheer alleen wat expliciet in de documenten staat.`;
 
 module.exports = async function handler(req, res) {
   try {
