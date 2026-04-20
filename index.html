@@ -1479,7 +1479,13 @@ async function analyseFiles() {
       }),
     });
 
-    const json = await res.json();
+    const rawText = await res.text();
+    let json;
+    try {
+      json = JSON.parse(rawText);
+    } catch {
+      throw new Error('Server fout (' + res.status + '): ' + rawText.slice(0, 200));
+    }
 
     if (!res.ok) {
       throw new Error(json.error || 'Onbekende fout');
