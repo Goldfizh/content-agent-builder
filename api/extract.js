@@ -68,10 +68,14 @@ module.exports = async function handler(req, res) {
         title: file.name,
       });
     } else {
-      // Plain text or markdown
+      // Plain text or markdown — truncate to avoid timeouts
+      const MAX_CHARS = 6000;
+      const body = typeof file.data === 'string' && file.data.length > MAX_CHARS
+        ? file.data.slice(0, MAX_CHARS) + '\n[... bestand ingekort ...]'
+        : file.data;
       content.push({
         type: 'text',
-        text: `--- Bestand: ${file.name} ---\n${file.data}`,
+        text: `--- Bestand: ${file.name} ---\n${body}`,
       });
     }
   }
