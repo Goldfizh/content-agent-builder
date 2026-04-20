@@ -2339,6 +2339,9 @@ Voer voor elke aflevering een zelfcheck uit. Herstel elke "nee". Sluit **altijd*
 ### Jouw volgende stap
 - [ ] [Actie 1]
 > Geen acties? Pagina klaar voor publicatie.
+
+---
+⚠️ **AI-output** — controleer feiten, links en aanspreekvorm vóór publicatie. Dit is een concept, geen definitieve tekst.
 ---
 \`\`\`
 
@@ -3707,7 +3710,7 @@ function lcGenToolWritePage() {
     "        { role: 'system', content: systemContent },",
     "        { role: 'user',   content: userPrompt }",
     '      ]);',
-    "      return JSON.stringify({ success: true, page: { content: response.content } });",
+    "      return JSON.stringify({ success: true, page: { content: response.content, ai_generated: true, generated_at: new Date().toISOString() } });",
     '    } catch (err) {',
     '      return JSON.stringify({ success: false, error: err.message });',
     '    }',
