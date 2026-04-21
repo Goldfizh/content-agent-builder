@@ -129,9 +129,18 @@ module.exports = async function handler(req, res) {
   const text = data.content?.[0]?.text || '';
   const stopReason = data.stop_reason || '';
 
-  // Extract JSON from response (Claude might wrap it in backticks)
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  // Probeer JSON op meerdere manieren te extraheren (Claude kan wrappers toevoegen)
+  const candidates = [];
+  // 1. Probeer ```json ... ``` code block
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) candidates.push(codeBlockMatch[1].trim());
+  // 2. Probeer greedy { ... } match
+  const greedyMatch = text.match(/\{[\s\S]*\}/);
+  if (greedyMatch) candidates.push(greedyMatch[0]);
+  // 3. De ruwe tekst zelf (als Claude pure JSON teruggaf)
+  candidates.push(text.trim());
+
+  if (!candidates.length) {
     return res.status(500).json({
       error: 'Kon geen gegevens extraheren uit de documenten',
       stopReason,
@@ -139,23 +148,39 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  try {
-    const fields = JSON.parse(jsonMatch[0]);
-    return res.status(200).json({ fields });
-  } catch (parseErr) {
-    // Response mogelijk afgekapt door max_tokens — probeer tot laatste geldige } te parsen
-    if (stopReason === 'max_tokens') {
-      return res.status(500).json({
-        error: 'Response afgekapt (max_tokens bereikt). Probeer het met minder of kleinere documenten, of splits de intake.',
-        stopReason,
-      });
+  let fields = null;
+  let lastErr = null;
+  for (const cand of candidates) {
+    try {
+      fields = JSON.parse(cand);
+      break;
+    } catch (err) {
+      lastErr = err;
+      // Probeer trailing commas te strippen (veelvoorkomende Claude-fout)
+      try {
+        const cleaned = cand.replace(/,\s*([}\]])/g, '$1');
+        fields = JSON.parse(cleaned);
+        break;
+      } catch {}
     }
+  }
+
+  if (fields) {
+    return res.status(200).json({ fields });
+  }
+
+  if (stopReason === 'max_tokens') {
     return res.status(500).json({
-      error: 'Onverwacht formaat van de API-respons: ' + parseErr.message,
+      error: 'Response afgekapt (max_tokens bereikt). Upload minder of kleinere documenten, of splits de intake.',
       stopReason,
-      preview: jsonMatch[0].slice(0, 300) + '…',
     });
   }
+
+  return res.status(500).json({
+    error: 'Onverwacht formaat van de API-respons: ' + (lastErr ? lastErr.message : 'onbekend'),
+    stopReason,
+    preview: (candidates[0] || text).slice(0, 500) + '…',
+  });
 
   } catch (err) {
     return res.status(500).json({ error: 'Serverfout: ' + err.message });
