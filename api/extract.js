@@ -112,7 +112,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
+        max_tokens: 8192,
         messages: [{ role: 'user', content }],
       }),
     });
@@ -127,18 +127,34 @@ module.exports = async function handler(req, res) {
 
   const data = await apiResponse.json();
   const text = data.content?.[0]?.text || '';
+  const stopReason = data.stop_reason || '';
 
   // Extract JSON from response (Claude might wrap it in backticks)
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    return res.status(500).json({ error: 'Kon geen gegevens extraheren uit de documenten' });
+    return res.status(500).json({
+      error: 'Kon geen gegevens extraheren uit de documenten',
+      stopReason,
+      preview: text.slice(0, 300),
+    });
   }
 
   try {
     const fields = JSON.parse(jsonMatch[0]);
     return res.status(200).json({ fields });
-  } catch {
-    return res.status(500).json({ error: 'Onverwacht formaat van de API-respons' });
+  } catch (parseErr) {
+    // Response mogelijk afgekapt door max_tokens — probeer tot laatste geldige } te parsen
+    if (stopReason === 'max_tokens') {
+      return res.status(500).json({
+        error: 'Response afgekapt (max_tokens bereikt). Probeer het met minder of kleinere documenten, of splits de intake.',
+        stopReason,
+      });
+    }
+    return res.status(500).json({
+      error: 'Onverwacht formaat van de API-respons: ' + parseErr.message,
+      stopReason,
+      preview: jsonMatch[0].slice(0, 300) + '…',
+    });
   }
 
   } catch (err) {
