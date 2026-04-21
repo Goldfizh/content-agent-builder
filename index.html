@@ -1299,8 +1299,30 @@
       </div>
 
       <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--light-grey)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="lc-review-toggle" checked onchange="toggleReviewSection()" style="width:16px;height:16px;accent-color:var(--purple);flex-shrink:0">
+          <span style="font-weight:600;font-size:14px">Kwaliteitsreview activeren</span>
+          <span style="font-size:11px;background:var(--purple-light);color:var(--purple);padding:2px 8px;border-radius:99px;font-weight:600">aanbevolen</span>
+        </label>
+        <div class="hint" style="margin-top:5px;margin-left:26px">Na elke generatie lopen drie critics parallel (SEO/GEO, Brand, Strategy) en een synthesizer beslist: groen publiceren, oranje auto-revise, rood human review.</div>
+
+        <div id="lc-review-section" style="margin-top:16px;margin-left:26px">
+          <div class="field">
+            <label>Domeinchecks <span style="font-weight:400;color:var(--mid-grey)">(optioneel)</span></label>
+            <div class="hint">Extra critic voor gereguleerde sectoren. Voegt een 4e critic toe die op domein-specifieke risico's controleert (claims, tuchtrecht, disclaimers).</div>
+            <div class="btn-group" style="margin-top:8px;flex-wrap:wrap">
+              <button class="btn-option lc-domain-btn" data-value="legal"     onclick="toggleDomainCritic('legal')">Juridisch (NL)</button>
+              <button class="btn-option lc-domain-btn" data-value="medical"   onclick="toggleDomainCritic('medical')">Medisch / BIG</button>
+              <button class="btn-option lc-domain-btn" data-value="financial" onclick="toggleDomainCritic('financial')">Financieel / AFM</button>
+              <button class="btn-option lc-domain-btn" data-value="claims"    onclick="toggleDomainCritic('claims')">Claims (food/cosmetics)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--light-grey)">
         <p style="font-size:13px;color:var(--mid-grey);margin-bottom:16px;line-height:1.5">
-          De ZIP bevat een werkende LangChain agent met 6 content-tools (+ 7 migratie-tools indien ingeschakeld), Vercel API-endpoints en alle gegenereerde kennisbestanden. Deploy in je eigen Vercel-project.
+          De ZIP bevat een werkende LangChain agent met 6 content-tools (+ 7 migratie-tools indien ingeschakeld), review-pipeline, Vercel API-endpoints en alle gegenereerde kennisbestanden. Deploy in je eigen Vercel-project.
         </p>
         <button class="btn-generate" style="width:100%" onclick="confirmLangChainDownload()">
           ↓ Genereer &amp; download LangChain Agent
@@ -3058,6 +3080,8 @@ async function _doDownloadCustomAgent() {
 let lcCmsChoice = 'webflow';
 let lcMigrationEnabled = false;
 let lcRedirectFormat = 'vercel';
+let lcReviewEnabled = true;
+let lcDomainCritics = new Set();
 
 function toggleMigrationSection() {
   lcMigrationEnabled = document.getElementById('lc-migration-toggle').checked;
@@ -3066,6 +3090,21 @@ function toggleMigrationSection() {
 function selectRedirectFormat(format) {
   lcRedirectFormat = format;
   document.querySelectorAll('.lc-redirect-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === format));
+}
+function toggleReviewSection() {
+  lcReviewEnabled = document.getElementById('lc-review-toggle').checked;
+  document.getElementById('lc-review-section').style.display = lcReviewEnabled ? '' : 'none';
+  if (!lcReviewEnabled) {
+    lcDomainCritics.clear();
+    document.querySelectorAll('.lc-domain-btn').forEach(b => b.classList.remove('selected'));
+  }
+}
+function toggleDomainCritic(name) {
+  if (lcDomainCritics.has(name)) lcDomainCritics.delete(name);
+  else lcDomainCritics.add(name);
+  document.querySelectorAll('.lc-domain-btn').forEach(b => {
+    b.classList.toggle('selected', lcDomainCritics.has(b.dataset.value));
+  });
 }
 
 function openLangChainModal() {
@@ -3113,12 +3152,16 @@ async function confirmLangChainDownload() {
     enabled: lcMigrationEnabled,
     redirectFormat: lcRedirectFormat || 'vercel',
   };
+  const reviewConfig = {
+    enabled: lcReviewEnabled,
+    domainCritics: Array.from(lcDomainCritics),
+  };
   closeLangChainModal();
   const btn = document.querySelector('.btn-lc');
   const orig = btn.textContent;
   btn.textContent = 'Genereren…';
   btn.disabled = true;
-  try { await generateAndDownloadLangChain(cmsConfig, migrationConfig); }
+  try { await generateAndDownloadLangChain(cmsConfig, migrationConfig, reviewConfig); }
   finally { btn.textContent = orig; btn.disabled = false; }
 }
 
@@ -3153,22 +3196,33 @@ function buildLcConfig() {
 }
 
 // ── LangChain ZIP generator ───────────────────────────────────────────────
-async function generateAndDownloadLangChain(cmsConfig, migrationConfig = {}) {
+async function generateAndDownloadLangChain(cmsConfig, migrationConfig = {}, reviewConfig = {}) {
   const zip  = new JSZip();
   const cfg  = buildLcConfig();
   const name = cfg.client.toLowerCase().replace(/\s+/g, '-');
   const mig  = migrationConfig.enabled || false;
   const fmt  = migrationConfig.redirectFormat || 'vercel';
+  const rev  = reviewConfig.enabled !== false;
+  const domainCritics = Array.isArray(reviewConfig.domainCritics) ? reviewConfig.domainCritics : [];
 
   zip.file('package.json',             lcGenPackageJson(name, mig));
   zip.file('vercel.json',              lcGenVercelJson(mig));
   zip.file('.env.example',             lcGenEnvExample(cmsConfig));
-  zip.file('README.md',                lcGenReadme(cfg, cmsConfig, migrationConfig));
-  zip.file('index.html',               lcGenFrontend(cfg, cmsConfig, migrationConfig));
-  zip.file('api/agent.js',             lcGenApiAgent());
+  zip.file('README.md',                lcGenReadme(cfg, cmsConfig, migrationConfig, { enabled: rev, domainCritics }));
+  zip.file('index.html',               lcGenFrontend(cfg, cmsConfig, migrationConfig, { enabled: rev, domainCritics }));
+  zip.file('api/agent.js',             lcGenApiAgent(rev));
   zip.file('api/migrate.js',           lcGenApiMigrate());
   zip.file('lib/agent.js',             lcGenLibAgent(mig));
-  zip.file('lib/prompts.js',           lcGenPrompts(cfg, mig));
+  zip.file('lib/prompts.js',           lcGenPrompts(cfg, mig, rev));
+
+  if (rev) {
+    zip.file('lib/review.js',          lcGenLibReview(domainCritics));
+    zip.file('api/publish.js',         lcGenApiPublish(cmsConfig));
+    domainCritics.forEach(dc => {
+      const knowledge = lcGenDomainKnowledge(dc);
+      if (knowledge) zip.file('knowledge/domain-' + dc + '.md', knowledge);
+    });
+  }
   zip.file('lib/tools/index.js',       lcGenToolsIndex(mig));
   zip.file('lib/tools/fetch-url.js',   lcGenToolFetchUrl());
   zip.file('lib/tools/consolidate.js', lcGenToolConsolidate());
@@ -3260,15 +3314,19 @@ function lcGenEnvExample(cms) {
   return lines.join('\n');
 }
 
-function lcGenReadme(cfg, cms, migConfig = {}) {
+function lcGenReadme(cfg, cms, migConfig = {}, reviewConfig = {}) {
   const cmsLabel = { webflow:'Webflow', contentful:'Contentful', prepr:'Prepr', headless:'Headless/REST', andere:'(nog te bepalen)' }[cms.platform] || cms.platform;
   const mig = migConfig.enabled || false;
   const fmt = migConfig.redirectFormat || 'vercel';
   const fmtLabel = { vercel:'vercel.json', netlify:'_redirects', htaccess:'.htaccess', nginx:'nginx-redirects.conf' }[fmt] || fmt;
+  const rev = reviewConfig.enabled !== false;
+  const dcs = Array.isArray(reviewConfig.domainCritics) ? reviewConfig.domainCritics : [];
+  const dcLabels = { legal: 'Juridisch (NL)', medical: 'Medisch', financial: 'Financieel / AFM', claims: 'Claims (food/cosmetics)' };
   const lines = [
     '# ' + cfg.client + ' — LangChain Content Agent',
     '',
     'Gegenereerd door Goldfizh Content Agent Builder voor **' + cfg.agency + '**.',
+    rev ? '_Review-pipeline actief: writer → SEO/GEO + Brand + Strategy critics parallel → synthesizer → auto-revise bij oranje._' : '',
     mig ? '_Inclusief migratie-module (redirects, bulk CMS, Excel import/export)._' : '',
     '',
     '## Vereisten',
@@ -3296,8 +3354,15 @@ function lcGenReadme(cfg, cms, migConfig = {}) {
     '',
     '### `POST /api/agent` — Schrijf één pagina',
     '```json',
-    '{ "url": "https://www.voorbeeld.nl/diensten/...", "pageType": "dienstpagina", "keywords": "...", "brief": "..." }',
+    '{ "url": "https://www.voorbeeld.nl/diensten/...", "pageType": "dienstpagina", "style": "feitelijk", "keywords": "...", "brief": "..." }',
     '```',
+    rev ? 'Response bevat `content`, `page` (JSON), `verdict` (green/orange/red), `reports` (per critic) en `revised` (bool — true als de writer na oranje opnieuw heeft geschreven).' : null,
+    rev ? '' : null,
+    rev ? '### `POST /api/publish` — Concept publiceren in CMS' : null,
+    rev ? '```json' : null,
+    rev ? '{ "page": { ... }, "verdict": "green", "pageType": "dienstpagina" }' : null,
+    rev ? '```' : null,
+    rev ? 'Publiceert alleen als verdict niet `red` is. Rode output wordt geblokkeerd met HTTP 403.' : null,
     '',
     '### `POST /api/migrate` — Batch migratie (continuation token)',
     '```json',
@@ -3362,6 +3427,33 @@ function lcGenReadme(cfg, cms, migConfig = {}) {
     );
   }
 
+  if (rev) {
+    lines.push(
+      '',
+      '## Review-pipeline',
+      '',
+      'Na elke aanroep van `/api/agent` lopen drie critics parallel:',
+      '',
+      '| Critic | Wat controleert hij |',
+      '|--------|----------------------|',
+      '| **SEO/GEO** | Meta-titel, description, headings, keyword-coverage, citeerbaarheid |',
+      '| **Brand** | Toon, aanspreekvorm, verboden woorden, merkwaarden, guardrails |',
+      '| **Strategy** | Paginatype-alignment, doelgroep-tone, CTA-logica, pijler-aanwezigheid |',
+    );
+    if (dcs.length) {
+      lines.push('', 'Plus domein-critic(s): ' + dcs.map(d => '**' + (dcLabels[d] || d) + '**').join(', ') + '. Deze gebruiken `knowledge/domain-<name>.md` als kennisbron.');
+    }
+    lines.push(
+      '',
+      'De **synthesizer** beslist op basis van alle rapporten:',
+      '- **Groen** → publish-ready, roep `/api/publish` aan',
+      '- **Oranje** → writer heeft één auto-revisie gedaan; controleer de reports voor publiceren',
+      '- **Rood** → human review vereist; `/api/publish` blokkeert',
+      '',
+      'Zet de pipeline uit door `api/agent.js` aan te passen (laat `runReview` achterwege) — niet aanbevolen.',
+    );
+  }
+
   lines.push(
     '',
     '## CMS',
@@ -3374,15 +3466,129 @@ function lcGenReadme(cfg, cms, migConfig = {}) {
   return lines.filter(l => l !== null).join('\n');
 }
 
-function lcGenApiAgent() {
+function lcGenApiAgent(reviewEnabled = false) {
+  if (!reviewEnabled) {
+    return [
+      "import { createContentAgent } from '../lib/agent.js';",
+      '',
+      'export const config = { maxDuration: 300 };',
+      '',
+      'function checkAuth(req, res) {',
+      '  const key = process.env.AGENT_API_KEY;',
+      '  if (!key) return true;',
+      "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+      "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+      '  return true;',
+      '}',
+      '',
+      'export default async function handler(req, res) {',
+      "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+      '  if (!checkAuth(req, res)) return;',
+      '',
+      '  const { url, pageType = "dienstpagina", keywords = "", brief = "", sources = [], style = "feitelijk" } = req.body || {};',
+      '',
+      '  try {',
+      '    const agent = createContentAgent();',
+      '    const input = sources.length',
+      '      ? "Consolideer de volgende " + sources.length + " bronpagina\'s en schrijf één sterke pagina.\\nStijl: " + style + "\\nURL: " + url + "\\nPaginatype: " + pageType + "\\nZoekwoorden: " + keywords + "\\nBronnen om op te halen: " + sources.join(", ")',
+      '      : "Schrijf een " + pageType + ".\\nStijl: " + style + "\\nURL: " + url + "\\nZoekwoorden: " + keywords + "\\nOpdracht: " + brief;',
+      '',
+      '    const result = await agent.invoke({ input });',
+      '    return res.status(200).json({ success: true, content: result.output, style });',
+      '  } catch (err) {',
+      '    return res.status(500).json({ success: false, error: err.message });',
+      '  }',
+      '}',
+    ].join('\n');
+  }
   return [
     "import { createContentAgent } from '../lib/agent.js';",
+    "import { runReview } from '../lib/review.js';",
     '',
     'export const config = { maxDuration: 300 };',
     '',
     'function checkAuth(req, res) {',
     '  const key = process.env.AGENT_API_KEY;',
-    '  if (!key) return true; // geen key ingesteld = open (alleen lokaal gebruiken)',
+    '  if (!key) return true;',
+    "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
+    "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
+    '  return true;',
+    '}',
+    '',
+    'function buildInput({ url, pageType, keywords, brief, sources, style }) {',
+    '  return sources.length',
+    "    ? \"Consolideer de volgende \" + sources.length + \" bronpagina's en schrijf één sterke pagina.\\nStijl: \" + style + \"\\nURL: \" + url + \"\\nPaginatype: \" + pageType + \"\\nZoekwoorden: \" + keywords + \"\\nBronnen om op te halen: \" + sources.join(\", \")",
+    '    : "Schrijf een " + pageType + ".\\nStijl: " + style + "\\nURL: " + url + "\\nZoekwoorden: " + keywords + "\\nOpdracht: " + brief;',
+    '}',
+    '',
+    'function extractPage(output) {',
+    '  if (typeof output !== "string") return { content: String(output || "") };',
+    "  const match = output.match(/\\{[\\s\\S]*\\}/);",
+    '  if (!match) return { content: output };',
+    '  try { return JSON.parse(match[0]); } catch { return { content: output }; }',
+    '}',
+    '',
+    'export default async function handler(req, res) {',
+    "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
+    '  if (!checkAuth(req, res)) return;',
+    '',
+    '  const {',
+    '    url, pageType = "dienstpagina", keywords = "",',
+    '    brief = "", sources = [], style = "feitelijk",',
+    '  } = req.body || {};',
+    '',
+    '  try {',
+    '    const agent = createContentAgent();',
+    '    // 1. Writer → v1',
+    '    const v1 = await agent.invoke({ input: buildInput({ url, pageType, keywords, brief, sources, style }) });',
+    '    const pageV1 = extractPage(v1.output);',
+    '    const contentV1 = pageV1.content || v1.output;',
+    '',
+    '    // 2. Review (3 critics parallel + synthesizer)',
+    '    const review = await runReview({ content: contentV1, brief: { url, pageType, keywords, brief, style } });',
+    '',
+    '    let finalPage = pageV1;',
+    '    let finalContent = contentV1;',
+    '    let revised = false;',
+    '',
+    '    // 3. Auto-revise bij oranje (max 1x)',
+    '    if (review.verdict === "orange" && review.revisionPrompt) {',
+    '      const reviseInput = buildInput({ url, pageType, keywords, brief, sources, style }) +',
+    '        "\\n\\nREVISIE-INSTRUCTIE: " + review.revisionPrompt +',
+    '        "\\n\\nBESTAANDE OUTPUT:\\n" + contentV1;',
+    '      const v2 = await agent.invoke({ input: reviseInput });',
+    '      const pageV2 = extractPage(v2.output);',
+    '      finalPage = pageV2;',
+    '      finalContent = pageV2.content || v2.output;',
+    '      revised = true;',
+    '    }',
+    '',
+    '    return res.status(200).json({',
+    '      success: true,',
+    '      content: finalContent,',
+    '      page: finalPage,',
+    '      verdict: review.verdict,',
+    '      reports: review.reports,',
+    '      summary: review.summary,',
+    '      revised,',
+    '      style,',
+    '    });',
+    '  } catch (err) {',
+    '    return res.status(500).json({ success: false, error: err.message });',
+    '  }',
+    '}',
+  ].join('\n');
+}
+
+function lcGenApiPublish(cms) {
+  return [
+    "import { publishCmsTool } from '../lib/tools/publish-cms.js';",
+    '',
+    'export const config = { maxDuration: 60 };',
+    '',
+    'function checkAuth(req, res) {',
+    '  const key = process.env.AGENT_API_KEY;',
+    '  if (!key) return true;',
     "  const token = (req.headers['authorization'] || '').replace('Bearer ', '');",
     "  if (token !== key) { res.status(401).json({ error: 'Unauthorized' }); return false; }",
     '  return true;',
@@ -3392,23 +3598,424 @@ function lcGenApiAgent() {
     "  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });",
     '  if (!checkAuth(req, res)) return;',
     '',
-    '  const { url, pageType = "dienstpagina", keywords = "", brief = "", sources = [] } = req.body || {};',
+    '  const { page, verdict, pageType = "dienstpagina" } = req.body || {};',
+    "  if (!page) return res.status(400).json({ error: 'page is verplicht' });",
+    "  if (verdict === 'red') return res.status(403).json({ error: 'Kan rode output niet publiceren — vereist human review/edit.' });",
     '',
     '  try {',
-    '    const agent = createContentAgent();',
-    '    const input = sources.length',
-    '      ? "Consolideer de volgende " + sources.length + " bronpagina\'s en schrijf één sterke pagina.\\n" +',
-    '        "URL: " + url + "\\nPaginatype: " + pageType + "\\nZoekwoorden: " + keywords + "\\n" +',
-    '        "Bronnen om op te halen: " + sources.join(", ")',
-    '      : "Schrijf een " + pageType + ".\\nURL: " + url + "\\nZoekwoorden: " + keywords + "\\nOpdracht: " + brief;',
-    '',
-    '    const result = await agent.invoke({ input });',
-    '    return res.status(200).json({ success: true, content: result.output });',
+    '    const result = await publishCmsTool.invoke({ page, pageType });',
+    '    const parsed = typeof result === "string" ? JSON.parse(result) : result;',
+    '    return res.status(parsed.success ? 200 : 500).json(parsed);',
     '  } catch (err) {',
     '    return res.status(500).json({ success: false, error: err.message });',
     '  }',
     '}',
   ].join('\n');
+}
+
+function lcGenLibReview(domainCritics = []) {
+  const imports = [
+    "import { ChatAnthropic } from '@langchain/anthropic';",
+    "import { readKnowledge } from './tools/load-knowledge.js';",
+    "import { readFile } from 'fs/promises';",
+    "import { fileURLToPath } from 'url';",
+    "import path from 'path';",
+  ];
+  const domainLoad = domainCritics.length
+    ? `\nasync function readDomainPack(name) {
+  try {
+    const p = path.join(rootDir, 'knowledge', 'domain-' + name + '.md');
+    return await readFile(p, 'utf8');
+  } catch { return null; }
+}
+`
+    : '\nasync function readDomainPack() { return null; }\n';
+
+  const activeDomains = JSON.stringify(domainCritics);
+
+  return `${imports.join('\n')}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+
+const ACTIVE_DOMAIN_CRITICS = ${activeDomains};
+
+const model = new ChatAnthropic({ model: 'claude-sonnet-4-6', maxTokens: 2048 });
+${domainLoad}
+function parseJson(raw) {
+  if (typeof raw !== 'string') raw = String(raw || '');
+  const m = raw.match(/\\{[\\s\\S]*\\}/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch { return null; }
+}
+
+async function callReviewer({ role, system, content, brief }) {
+  const user = 'BRIEF:\\n' + JSON.stringify(brief, null, 2) +
+    '\\n\\n---\\n\\nPAGINA:\\n' + content +
+    '\\n\\n---\\n\\nGeef ALLEEN dit JSON terug (geen uitleg, geen markdown):\\n' +
+    '{"role":"' + role + '","flags":[{"severity":"blocker|revise|optional","issue":"...","suggestion":"..."}],"summary":"één zin samenvatting"}';
+  try {
+    const resp = await model.invoke([
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ]);
+    const raw = typeof resp.content === 'string' ? resp.content : (resp.content?.[0]?.text || '');
+    const parsed = parseJson(raw);
+    return parsed || { role, flags: [], summary: 'Critic kon geen geldig rapport produceren.' };
+  } catch (err) {
+    return { role, flags: [], summary: 'Critic-fout: ' + err.message };
+  }
+}
+
+const SEO_SYSTEM = \`Je bent een SEO/GEO-reviewer. Je beoordeelt content strikt op technische SEO en Generative Engine Optimization.
+
+CHECKS (flag als iets fout is):
+- Meta-titel: ≤60 tekens, bevat primair keyword, uniek en zinvol
+- Meta-description: 140–160 tekens, call-to-action aanwezig
+- H1 aanwezig, uniek, bevat primair keyword
+- Heading-hiërarchie correct (H1 > H2 > H3, geen sprongen)
+- Primair keyword in eerste 100 woorden van body
+- Interne linking: minstens 1 interne link zichtbaar (of plekken voor links gemarkeerd)
+- Alt-teksten: bij image-referenties beschrijvend, niet stuffed
+- Semantic entity coverage (GEO): gerelateerde entiteiten en vakbegrippen genoemd
+- Question-answer structuur voor AI-zoekresultaten (FAQ-achtige secties waar passend)
+- Citeerbaarheid: concrete cijfers, bronnen of definities die AI-zoekmachines kunnen citeren
+
+SEO- EN GEO-KENNIS (aanvullende richtlijnen van deze klant):
+\${'$'}{seoKnowledge}
+
+Blocker = mag nooit live (verplicht element ontbreekt).
+Revise = moet scherper voordat het live kan.
+Optional = kan live, maar beter kan.\`;
+
+const BRAND_SYSTEM = \`Je bent een merkredacteur. Je beoordeelt content strikt op trouw aan de merkregels van deze klant.
+
+CHECKS:
+- Aanspreekvorm consistent (geen drift tussen je/u)
+- Toon matcht de voorgeschreven stijl
+- Geen verboden woorden
+- Merkwaarden herkenbaar in de copy
+- Jargon-beleid gerespecteerd (minimaal/branche-specifiek/ruim)
+- Stilistische drift: geen zinnen die "als een telecomprovider" klinken waar het een advocaat betreft (context-gevoelig)
+- Guardrails niet overtreden
+
+MERKREGELS (brand.md van deze klant):
+\${'$'}{brandKnowledge}
+
+Blocker = schendt guardrail of verboden woord of fundamenteel off-brand.
+Revise = past niet bij de toon maar is niet disqualificerend.
+Optional = kan scherper.\`;
+
+const STRATEGY_SYSTEM = \`Je bent een contentstrateeg. Je beoordeelt of deze pagina zijn strategische doel bereikt.
+
+CHECKS:
+- Is dit echt het opgegeven paginatype (dienstpagina/artikelpagina/case/etc.)? Of is het stiekem iets anders geworden?
+- Spreekt het de doelgroep in hun eigen taal aan (zie doelgroep in brand.md)?
+- Is de CTA passend bij de funnel-positie van deze pagina?
+- Ondersteunt het een van de merkpijlers?
+- Zijn de geclaimde uitkomsten/benefits concreet en onderbouwd?
+- Past het in de bredere contentstrategie van deze klant?
+
+MERKREGELS + STRATEGIE (brand.md van deze klant):
+\${'$'}{brandKnowledge}
+
+Blocker = verkeerd paginatype of spreekt verkeerde doelgroep aan.
+Revise = mist strategische scherpte (CTA onduidelijk, pijler onzichtbaar).
+Optional = kan strategischer.\`;
+
+const DOMAIN_SYSTEMS = {
+  legal: \`Je bent een juridisch reviewer voor Nederlandse content.
+
+CHECKS (hard blockers):
+- Geen resultaatgaranties ("wij winnen altijd", "u krijgt gegarandeerd X")
+- Geen onjuiste wetsverwijzingen of verouderde artikelnummers
+- Geen stellige juridische claims zonder onderbouwing
+- Geen NOvA-gedragsregels overtredingen (voor advocaten)
+- Voldoende anonimisering bij casuïstiek (geen herleidbare persoonsgegevens)
+
+CHECKS (revise):
+- Juridische terminologie correct gebruikt (smartengeld vs. schadevergoeding vs. letselschade)
+- No-cure-no-pay formulering precies juist
+- Doorlooptijden en kansen realistisch geformuleerd
+- Disclaimer aanwezig bij generieke advies-content
+
+JURIDISCHE KENNIS (domein-pack):
+\${'$'}{domainKnowledge}\`,
+
+  medical: \`Je bent een medisch reviewer voor Nederlandse content.
+
+CHECKS (hard blockers):
+- Geen medische claims zonder onderbouwing of BIG-registratie-context
+- Geen genezingsbeloftes of diagnostische uitspraken
+- Reclamecode voor Medische Zelfzorg Hulpmiddelen gerespecteerd
+- Geen onderbouwde gezondheidsclaims in strijd met EU-Regulation 1924/2006
+
+CHECKS (revise):
+- Disclaimer ("geen vervanging voor medisch advies") aanwezig waar nodig
+- Terminologie correct (symptomen vs. aandoening vs. diagnose)
+- Verwijzing naar zorgprofessional bij serieuze klachten
+
+MEDISCHE KENNIS (domein-pack):
+\${'$'}{domainKnowledge}\`,
+
+  financial: \`Je bent een compliance-reviewer financiële dienstverlening (AFM/DNB).
+
+CHECKS (hard blockers):
+- Geen beleggingsadvies zonder vergunning / zonder disclaimer
+- Geen rendementsbeloftes
+- Risico-waarschuwing aanwezig bij beleggingsproducten
+- Geen garanties over waardeontwikkeling
+
+CHECKS (revise):
+- AFM-verplichte disclaimers aanwezig
+- Terminologie correct (rendement vs. waardeontwikkeling vs. opbrengst)
+- Kosten transparant genoemd
+- Doelgroepbescherming gerespecteerd (geen high-risk producten naar retail zonder warnings)
+
+FINANCIËLE KENNIS (domein-pack):
+\${'$'}{domainKnowledge}\`,
+
+  claims: \`Je bent een claims-reviewer voor food/cosmetics content (EU-regels).
+
+CHECKS (hard blockers):
+- Gezondheidsclaims voldoen aan EU-Regulation 1924/2006 (alleen goedgekeurde claims)
+- Geen cosmetische claims die medisch werk suggereren (Cosmetics Regulation 1223/2009)
+- Geen misleidende productvergelijkingen
+
+CHECKS (revise):
+- Claims onderbouwd met concrete ingredienten of studies
+- Terminologie consistent met productlabel
+- Geen overdreven "natuurlijk/biologisch/puur" zonder certificering
+
+CLAIMS-KENNIS (domein-pack):
+\${'$'}{domainKnowledge}\`,
+};
+
+const SYNTHESIZER_SYSTEM = \`Je bent de hoofdredacteur. Je krijgt de output van een writer plus rapporten van 3 tot 5 specialist-critics (SEO/GEO, Brand, Strategy, en soms een domein-critic).
+
+JOUW TAAK:
+1. Lees de pagina
+2. Lees alle critic-rapporten
+3. Beslis: groen / oranje / rood
+
+BESLISREGELS:
+- ROOD als één of meer rapporten een "blocker" bevatten (iets wat nooit live mag)
+- ORANJE als meerdere "revise" flags zijn of één kritische revise in Brand/Strategy/domein
+- GROEN als alle rapporten alleen "optional" flags hebben of leeg zijn
+
+BIJ ORANJE geef je een revisie-instructie: één bondige paragraaf die de writer vertelt wat er precies moet veranderen — alleen de belangrijkste punten, niet alle flags.
+
+Geef ALLEEN dit JSON terug:
+{"verdict":"green|orange|red","revision_prompt":"...bij oranje, anders lege string","summary":"één zin waarom deze verdict"}\`;
+
+async function callSynthesizer({ content, reports, brief }) {
+  const user = 'PAGINA:\\n' + content +
+    '\\n\\n---\\n\\nCRITIC-RAPPORTEN:\\n' + JSON.stringify(reports, null, 2) +
+    '\\n\\n---\\n\\nBRIEF:\\n' + JSON.stringify(brief, null, 2);
+  try {
+    const resp = await model.invoke([
+      { role: 'system', content: SYNTHESIZER_SYSTEM },
+      { role: 'user', content: user },
+    ]);
+    const raw = typeof resp.content === 'string' ? resp.content : (resp.content?.[0]?.text || '');
+    const parsed = parseJson(raw);
+    if (!parsed) return { verdict: 'orange', revision_prompt: 'Synthesizer kon geen verdict produceren — handmatige review aanbevolen.', summary: 'Synthesizer parse-fout.' };
+    return parsed;
+  } catch (err) {
+    return { verdict: 'red', revision_prompt: '', summary: 'Synthesizer-fout: ' + err.message };
+  }
+}
+
+export async function runReview({ content, brief }) {
+  const { brand, seo } = await readKnowledge();
+
+  // SEO en Brand/Strategy systems krijgen knowledge ingeprikt
+  const seoSystem = SEO_SYSTEM.replace('\${seoKnowledge}', seo || '(geen seo.md gevonden)');
+  const brandSystem = BRAND_SYSTEM.replace('\${brandKnowledge}', brand || '(geen brand.md gevonden)');
+  const strategySystem = STRATEGY_SYSTEM.replace('\${brandKnowledge}', brand || '(geen brand.md gevonden)');
+
+  // Core critics parallel
+  const corePromises = [
+    callReviewer({ role: 'seo', system: seoSystem, content, brief }),
+    callReviewer({ role: 'brand', system: brandSystem, content, brief }),
+    callReviewer({ role: 'strategy', system: strategySystem, content, brief }),
+  ];
+
+  // Optionele domain critics
+  const domainPromises = ACTIVE_DOMAIN_CRITICS.map(async dc => {
+    const pack = await readDomainPack(dc);
+    if (!pack) return null;
+    const system = (DOMAIN_SYSTEMS[dc] || '').replace('\${domainKnowledge}', pack);
+    if (!system) return null;
+    return callReviewer({ role: dc, system, content, brief });
+  });
+
+  const allResults = await Promise.all([...corePromises, ...domainPromises]);
+  const [seoRep, brandRep, strategyRep, ...domainReps] = allResults;
+
+  const reports = { seo: seoRep, brand: brandRep, strategy: strategyRep };
+  ACTIVE_DOMAIN_CRITICS.forEach((dc, i) => {
+    if (domainReps[i]) reports[dc] = domainReps[i];
+  });
+
+  const synth = await callSynthesizer({ content, reports, brief });
+
+  return {
+    reports,
+    verdict: synth.verdict || 'orange',
+    revisionPrompt: synth.revision_prompt || '',
+    summary: synth.summary || '',
+  };
+}
+`;
+}
+
+function lcGenDomainKnowledge(name) {
+  const packs = {
+    legal: `# Juridisch domein-pack (Nederland)
+
+Dit bestand wordt gebruikt door de Legal-critic tijdens de review-pipeline. Voeg hier klant-specifieke juridische aandachtspunten toe, bovenop de universele regels die al in de critic zijn ingebouwd.
+
+## Terminologie (Nederlands recht)
+
+- **Letselschade**: fysieke of psychische schade door toedoen van een ander
+- **Smartengeld**: vergoeding voor immateriële schade (pijn, verdriet, gederfde levensvreugde)
+- **Schadevergoeding**: vergoeding voor alle geleden schade (materieel + immaterieel)
+- **No cure no pay**: alleen toegestaan onder strikte voorwaarden (NOvA-regels)
+- **Aansprakelijkheid**: juridische verantwoordelijkheid voor schade, te onderscheiden van schuld
+
+## Standaard-formuleringen (goed)
+
+- "Wij beoordelen uw zaak kosteloos en vrijblijvend"
+- "In de meeste gevallen worden de kosten vergoed door de aansprakelijke partij"
+- "U ontvangt een concrete inschatting van uw slagingskansen"
+
+## Formuleringen om te vermijden
+
+- ❌ "Wij winnen altijd uw zaak"
+- ❌ "Gegarandeerd X euro smartengeld"
+- ❌ "U krijgt binnen 3 maanden uw geld"
+- ❌ "Wij zijn de beste advocaten van Nederland"
+
+## Casuïstiek-eisen
+
+Bij het noemen van cliëntcases:
+- Geen namen, geboortedata of andere herleidbare gegevens
+- Geen specifieke locaties (alleen provincie als nodig)
+- Bedragen afronden op veilige range ("tussen € 25.000 en € 75.000")
+- Uitkomst generiek houden ("volledige vergoeding toegekend")
+
+## NOvA-gedragsregels (samenvatting)
+
+- Geen vergelijkende reclame die collega-advocaten diskwalificeert
+- Geen misleidende reclame
+- Geen resultaatbeloftes
+- Vermeld altijd het kantoor en de beroepsvereniging (NOvA)
+
+## Klant-specifieke notities
+
+_Vul hier regels toe die specifiek zijn voor deze klant (bijv. specialisatie, dekkingsgebied, kantoor-formuleringen)._
+`,
+    medical: `# Medisch domein-pack (Nederland)
+
+Dit bestand wordt gebruikt door de Medical-critic tijdens de review-pipeline.
+
+## Wettelijk kader
+
+- **BIG-wet**: registratie-eisen voor medische beroepen
+- **Reclamecode voor Medische Zelfzorg Hulpmiddelen**: regels voor claims over zelfzorgproducten
+- **EU-Regulation 1924/2006**: gezondheidsclaims op voedingsmiddelen en zelfzorgproducten
+
+## Claims die nooit mogen zonder bewijs
+
+- Genezing van ziekten
+- Diagnose op afstand
+- Vervanging van medisch advies
+- "Klinisch bewezen" zonder bronvermelding
+
+## Standaard-disclaimers
+
+- "Deze informatie vervangt geen medisch advies. Raadpleeg bij klachten altijd een zorgprofessional."
+- "Individuele resultaten kunnen afwijken."
+- "Bij aanhoudende klachten: neem contact op met uw huisarts."
+
+## Terminologie
+
+- **Symptoom**: waarneembaar teken (mag benoemd worden)
+- **Aandoening**: medisch gedefinieerde toestand (terughoudend benoemen)
+- **Diagnose**: formele vaststelling door BIG-geregistreerde (nooit claimen zonder BIG-context)
+
+## Klant-specifieke notities
+
+_Vul hier regels toe die specifiek zijn voor deze klant._
+`,
+    financial: `# Financieel / AFM domein-pack
+
+Dit bestand wordt gebruikt door de Financial-critic tijdens de review-pipeline.
+
+## Wettelijk kader
+
+- **Wft (Wet op het financieel toezicht)**
+- **AFM-regels voor financiële communicatie**
+- **MiFID II** voor beleggingsadvies
+
+## Verplichte disclaimers
+
+- Beleggen kent risico's, u kunt uw inleg verliezen
+- Rendementen uit het verleden bieden geen garantie voor de toekomst
+- Lees altijd het Essentiële-informatiedocument voordat u belegt
+
+## Claims die niet mogen
+
+- "Gegarandeerd rendement"
+- "Risicovrij beleggen"
+- Cherry-picked historische rendementen zonder context
+- Doelgroepongeschikte producten zonder waarschuwing
+
+## Terminologie
+
+- **Rendement**: brutorendement vs. nettorendement expliciet maken
+- **Kosten**: TER, transactiekosten en adviesfee apart noemen
+- **Risicoprofiel**: verplicht bij elk beleggingsadvies
+
+## Klant-specifieke notities
+
+_Vul hier regels toe die specifiek zijn voor deze klant._
+`,
+    claims: `# Claims domein-pack (food/cosmetics, EU)
+
+Dit bestand wordt gebruikt door de Claims-critic tijdens de review-pipeline.
+
+## Wettelijk kader
+
+- **EU-Regulation 1924/2006**: gezondheidsclaims op voedingsmiddelen
+- **Cosmetics Regulation 1223/2009**: claims op cosmetica
+- **Nederlandse Warenwet**
+
+## Toegestane claims
+
+Alleen claims die in de EU-Register of Nutrition and Health Claims staan mogen letterlijk gebruikt worden. Wijkende bewoordingen mogen alleen als ze dezelfde betekenis hebben.
+
+## Claims die niet mogen
+
+- Ziekte-preventie claims op gewone voedingsmiddelen
+- "Natuurlijk" zonder duidelijke definitie of certificering
+- Cosmetische claims die medisch werk suggereren ("geneest acne", "behandelt eczeem")
+- Vergelijkende claims zonder concreet vergelijkbaar product
+
+## Standaard-formuleringen
+
+- "Draagt bij aan..." (alleen als gekoppeld aan goedgekeurde claim)
+- "Bevat X, wat bekend staat om..." (bij aangetoonde ingrediënt-eigenschappen)
+- "Geschikt voor dagelijks gebruik" (met onderbouwing)
+
+## Klant-specifieke notities
+
+_Vul hier regels toe die specifiek zijn voor deze klant._
+`,
+  };
+  return packs[name] || null;
 }
 
 function lcGenApiMigrate() {
@@ -3520,7 +4127,7 @@ function lcGenLibAgent(migration = false) {
   return lines.join('\n');
 }
 
-function lcGenPrompts(cfg, migration = false) {
+function lcGenPrompts(cfg, migration = false, reviewEnabled = false) {
   const guardrailLines = cfg.guardrails.length
     ? cfg.guardrails.map(g => '- ' + g.naam + (g.desc ? ' — ' + g.desc : '')).join('\n')
     : '- Verzin nooit feiten die niet in de kennisbank staan';
@@ -3540,6 +4147,12 @@ function lcGenPrompts(cfg, migration = false) {
     '- Zinsstructuur: ' + cfg.zinsstructuur,
     '- Verboden woorden: ' + verboden,
     '',
+    'STIJL-VARIANT (meegegeven via input als "Stijl: feitelijk|verhalend|autoriteit"):',
+    '- feitelijk: compacte structuur, duidelijke subkoppen, direct naar het punt, geen overbodige uitweidingen',
+    '- verhalend: open met een concrete situatie/case, werk via voorbeelden naar de dienst toe, menselijke toon',
+    '- autoriteit: leun op cijfers, bronnen en vakspecifieke precisie; toon expertise via gelaagde argumentatie',
+    'Als geen stijl is meegegeven: gebruik "feitelijk" als default.',
+    '',
     'DOELGROEP: geconfigureerd in brand.md — gebruik die als standaard. Vraag niet opnieuw, tenzij de gebruiker aangeeft dat deze pagina een afwijkende doelgroep heeft.',
     '',
     'INTAKEVRAGEN PER PAGINATYPE: elk paginatype in templates.md heeft aanvullende intakevragen. Raadpleeg templates.md na ontvangst van het paginatype en stel de bijbehorende vragen in hetzelfde bericht — tenzij al beantwoord.',
@@ -3550,8 +4163,14 @@ function lcGenPrompts(cfg, migration = false) {
     '3. Consolideer meerdere bronnen via consolidate_sources',
     '4. Schrijf de pagina via write_page',
     '5. Valideer via validate_output — bij paginatype "case" of "social proof": valideer alleen op toon en guardrails, niet op SEO',
-    '6. Publiceer als concept via publish_to_cms',
-  ];
+    reviewEnabled
+      ? '6. NIET publiceren. De review-pipeline beslist na jouw output of er gepubliceerd mag worden (via /api/publish). Geef als laatste antwoord ALLEEN het JSON-object dat uit write_page kwam — geen uitleg eromheen.'
+      : '6. Publiceer als concept via publish_to_cms',
+    reviewEnabled ? '' : null,
+    reviewEnabled
+      ? 'BIJ HERZIENING: als de input begint met "HERZIE:" of "REVISIE-INSTRUCTIE:", gebruik je bestaande output als basis en pas je ALLEEN de gevraagde punten aan. Herhaal de overige inhoud ongewijzigd.'
+      : null,
+  ].filter(l => l !== null);
 
   if (migration) {
     parts.push(
@@ -4668,7 +5287,7 @@ function lcGenApiCmsImport(cms) {
 }
 
 // ── Frontend (premium styling) ────────────────────────────────────────────
-function lcGenFrontend(cfg, cms, migConfig = {}) {
+function lcGenFrontend(cfg, cms, migConfig = {}, reviewConfig = {}) {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const client = esc(cfg.client || 'Klant');
   const agency = esc(cfg.agency || 'Goldfizh');
@@ -4676,10 +5295,31 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
   const cmsLabel = ({ webflow: 'Webflow', contentful: 'Contentful', prepr: 'Prepr', headless: 'headless CMS', andere: 'het CMS' })[cms?.platform] || 'het CMS';
   const mig    = !!migConfig.enabled;
   const hasCms = mig && cms?.platform && cms.platform !== 'andere';
+  const rev    = reviewConfig.enabled !== false;
+  const domainCritics = Array.isArray(reviewConfig.domainCritics) ? reviewConfig.domainCritics : [];
+  const domainLabels = { legal: 'Juridisch', medical: 'Medisch', financial: 'Financieel', claims: 'Claims' };
 
   const navMigTab    = mig ? `<button class="nav-tab" onclick="switchTab('migratie')">Migratie</button>` : '';
   const migTabPanel  = mig ? lcGenFrontendMigratieTab(base, cmsLabel, hasCms) : '';
   const apiMigRows   = mig ? lcGenFrontendApiMig(hasCms) : '';
+  const domainLabelStr = domainCritics.map(d => domainLabels[d] || d).join(', ');
+  const reviewBadge = rev
+    ? `<div style="margin-bottom:24px;padding:14px 18px;border-radius:12px;background:var(--gradient-purple-soft);border:1px solid rgba(99,49,244,0.12);font-size:13.5px;color:var(--dark-grey)"><strong style="color:var(--purple-deep)">Review-pipeline actief:</strong> na elke generatie lopen 3 critics parallel (SEO/GEO, Brand, Strategy)${domainCritics.length ? ` + ${esc(domainLabelStr)}` : ''} en beslist de synthesizer: groen / oranje / rood.</div>`
+    : '';
+  const publishEndpoint = rev
+    ? `
+    <div class="api-card">
+      <div><span class="api-method">POST</span><span class="api-path">/api/publish</span></div>
+      <div class="api-desc">Publiceert een reviewed pagina als concept in het CMS. Geblokkeerd bij verdict <code>red</code>.</div>
+      <div class="api-fields">
+        <table>
+          <tr><th>Veld</th><th>Type</th><th>Verplicht</th><th>Omschrijving</th></tr>
+          <tr><td><code>page</code></td><td>object</td><td><span class="tag-required">Verplicht</span></td><td>Het page-object uit /api/agent (meta_title, content, etc.)</td></tr>
+          <tr><td><code>verdict</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>green / orange / red — red blokkeert publicatie</td></tr>
+          <tr><td><code>pageType</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>Paginatype (standaard: dienstpagina)</td></tr>
+        </table>
+      </div>
+    </div>` : '';
 
   return `<!DOCTYPE html>
 <html lang="nl">
@@ -4919,6 +5559,66 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
       font-size: 11px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--mid-grey); margin-bottom: 16px;
     }
+
+    /* Review verdict */
+    .verdict-bar {
+      display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+      border-radius: 14px; margin-top: 20px; font-size: 14px;
+      border: 1px solid transparent;
+    }
+    .verdict-bar.green  { background: linear-gradient(135deg, rgba(230,247,238,0.9), rgba(200,235,215,0.6)); border-color: rgba(26,122,69,0.2); color: #1A7A45; }
+    .verdict-bar.orange { background: linear-gradient(135deg, rgba(255,243,205,0.9), rgba(255,228,168,0.6)); border-color: rgba(200,140,20,0.25); color: #8a5a00; }
+    .verdict-bar.red    { background: linear-gradient(135deg, rgba(254,232,232,0.9), rgba(250,210,210,0.6)); border-color: rgba(192,57,43,0.25); color: #9b2a1e; }
+    .verdict-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(255,255,255,0.5); }
+    .verdict-dot.green  { background: #2ECC71; }
+    .verdict-dot.orange { background: #F39C12; }
+    .verdict-dot.red    { background: #E74C3C; }
+    .verdict-title { font-weight: 700; font-size: 15px; }
+    .verdict-summary { margin-top: 2px; opacity: 0.9; }
+
+    .revise-badge {
+      display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; padding: 3px 9px; border-radius: 99px;
+      background: var(--purple-light); color: var(--purple-deep); margin-left: 8px;
+    }
+
+    .reports-wrap { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .report {
+      border: 1px solid var(--light-grey); border-radius: 12px; overflow: hidden;
+      background: white;
+    }
+    .report-header {
+      padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+      background: linear-gradient(135deg, rgba(244,244,246,0.6) 0%, rgba(255,255,255,1) 100%);
+    }
+    .report-role { flex: 1; color: var(--near-black); }
+    .report-role-tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px;
+      background: var(--purple-light); color: var(--purple-deep);
+    }
+    .report-summary { color: var(--dark-grey); font-weight: 400; font-size: 13px; }
+    .report-body { display: none; padding: 0 16px 16px; }
+    .report-body.open { display: block; }
+    .flag {
+      padding: 10px 12px; border-radius: 8px; margin-top: 8px; font-size: 13px;
+      border-left: 3px solid var(--mid-grey);
+      background: var(--off-white);
+    }
+    .flag.blocker  { border-left-color: #E74C3C; background: rgba(254,232,232,0.5); }
+    .flag.revise   { border-left-color: #F39C12; background: rgba(255,243,205,0.4); }
+    .flag.optional { border-left-color: var(--mid-grey); background: var(--off-white); }
+    .flag-issue { font-weight: 600; color: var(--near-black); }
+    .flag-suggestion { margin-top: 4px; color: var(--dark-grey); line-height: 1.5; }
+    .flag-severity {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+      letter-spacing: 0.06em;
+    }
+    .flag.blocker .flag-severity  { background: #E74C3C; color: white; }
+    .flag.revise .flag-severity   { background: #F39C12; color: white; }
+    .flag.optional .flag-severity { background: var(--light-grey); color: var(--dark-grey); }
   </style>
 </head>
 <body>
@@ -4948,7 +5648,7 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
   <div class="tab-panel active" id="tab-schrijf">
     <h1>Schrijf een pagina</h1>
     <p class="page-sub">Geef de agent een opdracht en hij schrijft een productieklare webpagina op basis van het merkprofiel, SEO-richtlijnen en de templates van ${client}.</p>
-
+    ${reviewBadge}
     <div class="card">
       <div class="card-header">
         <div class="card-icon">✍️</div>
@@ -4973,6 +5673,15 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
         </div>
       </div>
       <div class="form-row">
+        <label>Stijl</label>
+        <div class="hint">Hoe moet de pagina klinken? De schrijver past zijn ritme en opbouw hierop aan.</div>
+        <div class="btn-group-row" id="style-group">
+          <button class="btn-opt sel" data-value="feitelijk" onclick="selectStyle(this)">Feitelijk</button>
+          <button class="btn-opt" data-value="verhalend" onclick="selectStyle(this)">Verhalend</button>
+          <button class="btn-opt" data-value="autoriteit" onclick="selectStyle(this)">Autoriteit</button>
+        </div>
+      </div>
+      <div class="form-row">
         <label>URL van de pagina</label>
         <div class="hint">De toekomstige URL — ook als de pagina nog niet bestaat.</div>
         <input type="url" id="w-url" placeholder="${base}/diensten/voorbeeld-dienst" />
@@ -4994,6 +5703,17 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
       </div>
       <button class="btn-primary" onclick="schrijfPagina(this)">Schrijf pagina</button>
       <div class="status-bar" id="w-status"></div>
+      <div id="w-verdict-wrap" style="display:none">
+        <div class="verdict-bar" id="w-verdict">
+          <div class="verdict-dot" id="w-verdict-dot"></div>
+          <div style="flex:1">
+            <div class="verdict-title" id="w-verdict-title"></div>
+            <div class="verdict-summary" id="w-verdict-summary"></div>
+          </div>
+          <button class="btn-secondary" id="w-publish-btn" onclick="publishPage(this)" style="display:none">↑ Publiceer concept</button>
+        </div>
+        <div class="reports-wrap" id="w-reports"></div>
+      </div>
       <div class="output-box" id="w-output">
         <div class="output-header">
           <span class="output-label">Gegenereerde pagina</span>
@@ -5012,18 +5732,20 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
 
     <div class="api-card">
       <div><span class="api-method">POST</span><span class="api-path">/api/agent</span></div>
-      <div class="api-desc">Schrijft één productieklare webpagina op basis van merkregels, SEO-richtlijnen en templates. Ondersteunt ook consolidatie van meerdere bronpagina's.</div>
+      <div class="api-desc">Schrijft één productieklare webpagina op basis van merkregels, SEO-richtlijnen en templates.${rev ? ' Daarna loopt de review-pipeline — de response bevat <code>verdict</code>, <code>reports</code> en een <code>revised</code>-flag.' : ''}</div>
       <div class="api-fields">
         <table>
           <tr><th>Veld</th><th>Type</th><th>Verplicht</th><th>Omschrijving</th></tr>
           <tr><td><code>url</code></td><td>string</td><td><span class="tag-required">Verplicht</span></td><td>Toekomstige URL van de pagina</td></tr>
           <tr><td><code>pageType</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>dienstpagina / productpagina / artikelpagina / case / social proof snippet / overig</td></tr>
+          <tr><td><code>style</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>feitelijk / verhalend / autoriteit (standaard: feitelijk)</td></tr>
           <tr><td><code>keywords</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>Zoekwoorden, kommagescheiden</td></tr>
           <tr><td><code>brief</code></td><td>string</td><td><span class="tag-optional">Optioneel</span></td><td>Schrijfopdracht of context</td></tr>
           <tr><td><code>sources</code></td><td>string[]</td><td><span class="tag-optional">Optioneel</span></td><td>URL's van bronpagina's — agent haalt ze op en consolideert</td></tr>
         </table>
       </div>
     </div>
+    ${publishEndpoint}
     ${apiMigRows}
   </div>
 
@@ -5031,10 +5753,13 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
 
 <script>
   let pagetypeValue = 'dienstpagina';
+  let styleValue = 'feitelijk';
   let migratePagetype = 'dienstpagina';
   let redirectPermanent = true;
   let importOp = 'create';
   let bulkRunning = false;
+  let lastPage = null;
+  let lastVerdict = null;
 
   function authHeaders() {
     const key = document.getElementById('api-key-input').value.trim();
@@ -5054,6 +5779,11 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
     document.querySelectorAll('#pagetype-group .btn-opt').forEach(b => b.classList.remove('sel'));
     btn.classList.add('sel');
     pagetypeValue = btn.dataset.value;
+  }
+  function selectStyle(btn) {
+    document.querySelectorAll('#style-group .btn-opt').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    styleValue = btn.dataset.value;
   }
   function selectMigratePagetype(btn) {
     document.querySelectorAll('#migrate-pagetype-group .btn-opt').forEach(b => b.classList.remove('sel'));
@@ -5097,25 +5827,121 @@ function lcGenFrontend(cfg, cms, migConfig = {}) {
 
     btn.disabled = true;
     btn.textContent = 'Bezig…';
-    setStatus('w-status', 'Agent is aan het schrijven — dit duurt 20–60 seconden…', 'info');
+    setStatus('w-status', 'Agent schrijft — en review-pipeline (3 critics + synthesizer) loopt na afloop. Tel op ~60–120 seconden.', 'info');
     document.getElementById('w-output').classList.remove('show');
+    document.getElementById('w-verdict-wrap').style.display = 'none';
+    lastPage = null;
+    lastVerdict = null;
 
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ url, pageType: pagetypeValue, keywords, brief, sources }),
+        body: JSON.stringify({ url, pageType: pagetypeValue, keywords, brief, sources, style: styleValue }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Onbekende fout');
       document.getElementById('w-content').textContent = data.content;
       document.getElementById('w-output').classList.add('show');
-      setStatus('w-status', '✓ Pagina gegenereerd. Controleer de inhoud vóór publicatie.', 'success');
+      lastPage = data.page || { content: data.content };
+      lastVerdict = data.verdict || null;
+      if (data.verdict) {
+        renderVerdict(data);
+        hideStatus('w-status');
+      } else {
+        setStatus('w-status', '✓ Pagina gegenereerd. Controleer de inhoud vóór publicatie.', 'success');
+      }
     } catch (err) {
       setStatus('w-status', 'Fout: ' + err.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Schrijf pagina';
+    }
+  }
+
+  const ROLE_LABELS = { seo: 'SEO / GEO', brand: 'Brand', strategy: 'Strategy', legal: 'Juridisch', medical: 'Medisch', financial: 'Financieel', claims: 'Claims' };
+  const VERDICT_TEXT = {
+    green:  { title: 'Groen — publish-ready', hint: 'Alle critics akkoord. Klik "Publiceer concept" om naar het CMS te pushen.' },
+    orange: { title: 'Oranje — auto-revised', hint: 'De writer heeft één revisie-ronde doorlopen. Lees de rapporten; publiceren kan, maar check scherp.' },
+    red:    { title: 'Rood — human review vereist', hint: 'Een of meerdere critics vonden een blocker. Publiceren geblokkeerd totdat een mens de output herschrijft.' },
+  };
+
+  function renderVerdict(data) {
+    const wrap = document.getElementById('w-verdict-wrap');
+    const bar = document.getElementById('w-verdict');
+    const dot = document.getElementById('w-verdict-dot');
+    const title = document.getElementById('w-verdict-title');
+    const summary = document.getElementById('w-verdict-summary');
+    const publishBtn = document.getElementById('w-publish-btn');
+
+    const verdict = data.verdict || 'orange';
+    bar.className = 'verdict-bar ' + verdict;
+    dot.className = 'verdict-dot ' + verdict;
+    const meta = VERDICT_TEXT[verdict] || VERDICT_TEXT.orange;
+    title.innerHTML = meta.title + (data.revised ? '<span class="revise-badge">herzien</span>' : '');
+    summary.textContent = data.summary || meta.hint;
+    publishBtn.style.display = verdict === 'red' ? 'none' : '';
+
+    // Render reports
+    const reportsEl = document.getElementById('w-reports');
+    reportsEl.innerHTML = '';
+    const reports = data.reports || {};
+    Object.keys(reports).forEach(role => {
+      const rep = reports[role] || {};
+      const flags = Array.isArray(rep.flags) ? rep.flags : [];
+      const item = document.createElement('div');
+      item.className = 'report';
+      const label = ROLE_LABELS[role] || role;
+      const flagCount = flags.length ? ' — ' + flags.length + ' ' + (flags.length === 1 ? 'opmerking' : 'opmerkingen') : ' — geen opmerkingen';
+      item.innerHTML =
+        '<div class="report-header" onclick="toggleReport(this)">' +
+          '<span class="report-role-tag">' + label + '</span>' +
+          '<span class="report-role"><span class="report-summary">' + escHtml(rep.summary || '') + '</span></span>' +
+          '<span style="color:var(--mid-grey);font-size:12px">' + flagCount + '</span>' +
+        '</div>' +
+        '<div class="report-body">' +
+          (flags.length
+            ? flags.map(f =>
+                '<div class="flag ' + (f.severity || 'optional') + '">' +
+                  '<div class="flag-issue"><span class="flag-severity">' + (f.severity || 'optional') + '</span>' + escHtml(f.issue || '') + '</div>' +
+                  (f.suggestion ? '<div class="flag-suggestion">' + escHtml(f.suggestion) + '</div>' : '') +
+                '</div>'
+              ).join('')
+            : '<div style="font-size:13px;color:var(--mid-grey);padding:10px 0">Geen opmerkingen van deze critic.</div>') +
+        '</div>';
+      reportsEl.appendChild(item);
+    });
+
+    wrap.style.display = '';
+  }
+
+  function toggleReport(header) {
+    header.nextElementSibling.classList.toggle('open');
+  }
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function publishPage(btn) {
+    if (!lastPage) { setStatus('w-status', 'Geen pagina om te publiceren.', 'error'); return; }
+    if (lastVerdict === 'red') { setStatus('w-status', 'Rode output kan niet gepubliceerd worden.', 'error'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Publiceren…';
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ page: lastPage, verdict: lastVerdict, pageType: pagetypeValue }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Onbekende fout');
+      setStatus('w-status', '✓ Gepubliceerd als concept in het CMS.', 'success');
+      btn.textContent = '✓ Gepubliceerd';
+    } catch (err) {
+      setStatus('w-status', 'Publiceren mislukt: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '↑ Publiceer concept';
     }
   }
 
